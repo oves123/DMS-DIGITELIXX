@@ -8,7 +8,7 @@ const {
     getDistributorPurchases,
     getDistributorTopProducts,
     getDetailedTransactions
-} = require('../controllers/reportsController');
+} = require('../mongoControllers/reportsController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
 // Admin Reports

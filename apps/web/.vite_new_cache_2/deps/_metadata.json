@@ -1,85 +1,85 @@
 {
-  "hash": "199e409e",
+  "hash": "d9eb76db",
   "configHash": "f8e58a13",
-  "lockfileHash": "81f8aa01",
-  "browserHash": "96b7f358",
+  "lockfileHash": "c9a8ee1c",
+  "browserHash": "3170795f",
   "optimized": {
     "axios": {
       "src": "../../../../node_modules/axios/index.js",
       "file": "axios.js",
-      "fileHash": "ac2a1ba6",
+      "fileHash": "a7147182",
       "needsInterop": false
     },
     "jspdf-autotable": {
       "src": "../../../../node_modules/jspdf-autotable/dist/jspdf.plugin.autotable.mjs",
       "file": "jspdf-autotable.js",
-      "fileHash": "6cd42100",
+      "fileHash": "6c9e04f5",
       "needsInterop": false
     },
     "jspdf": {
       "src": "../../../../node_modules/jspdf/dist/jspdf.es.min.js",
       "file": "jspdf.js",
-      "fileHash": "63ba866a",
+      "fileHash": "fbbe3230",
       "needsInterop": false
     },
     "lucide-react": {
       "src": "../../../../node_modules/lucide-react/dist/esm/lucide-react.mjs",
       "file": "lucide-react.js",
-      "fileHash": "b335219e",
+      "fileHash": "93857ebd",
       "needsInterop": false
     },
     "papaparse": {
       "src": "../../../../node_modules/papaparse/papaparse.min.js",
       "file": "papaparse.js",
-      "fileHash": "a3893691",
+      "fileHash": "fe7109c0",
       "needsInterop": true
     },
     "react-dom": {
       "src": "../../../../node_modules/react-dom/index.js",
       "file": "react-dom.js",
-      "fileHash": "5e1450a7",
+      "fileHash": "6b6a5ac3",
       "needsInterop": true
     },
     "react-dom/client": {
       "src": "../../../../node_modules/react-dom/client.js",
       "file": "react-dom_client.js",
-      "fileHash": "9d645ff9",
+      "fileHash": "6abb1318",
       "needsInterop": true
     },
     "react-router-dom": {
       "src": "../../../../node_modules/react-router-dom/dist/index.mjs",
       "file": "react-router-dom.js",
-      "fileHash": "40c7c6ea",
+      "fileHash": "aff7257d",
       "needsInterop": false
     },
     "react": {
       "src": "../../../../node_modules/react/index.js",
       "file": "react.js",
-      "fileHash": "92906258",
+      "fileHash": "895af3e8",
       "needsInterop": true
     },
     "react/jsx-dev-runtime": {
       "src": "../../../../node_modules/react/jsx-dev-runtime.js",
       "file": "react_jsx-dev-runtime.js",
-      "fileHash": "c603a0f0",
+      "fileHash": "e343c851",
       "needsInterop": true
     },
     "react/jsx-runtime": {
       "src": "../../../../node_modules/react/jsx-runtime.js",
       "file": "react_jsx-runtime.js",
-      "fileHash": "f134a3c1",
+      "fileHash": "d0eaaca7",
       "needsInterop": true
     },
     "recharts": {
       "src": "../../../../node_modules/recharts/es6/index.js",
       "file": "recharts.js",
-      "fileHash": "0aabbd71",
+      "fileHash": "5ef0a666",
       "needsInterop": false
     },
     "xlsx": {
       "src": "../../../../node_modules/xlsx/xlsx.mjs",
       "file": "xlsx.js",
-      "fileHash": "dee41233",
+      "fileHash": "1f087306",
       "needsInterop": false
     }
   },

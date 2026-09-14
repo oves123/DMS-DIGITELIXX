@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getMetrics } = require('../controllers/dashboardController');
+const { getMetrics } = require('../mongoControllers/dashboardController');
 const { protect } = require('../middleware/authMiddleware');
 
 router.get('/metrics', protect, getMetrics);

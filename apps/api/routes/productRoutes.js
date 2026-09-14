@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getCategories, addCategory, getProducts, addProduct, updateProductVariant, deleteProductVariant, bulkUploadProducts, addProductVariant } = require('../controllers/productController');
+const { getCategories, addCategory, getProducts, addProduct, updateProductVariant, deleteProductVariant, bulkUploadProducts, addProductVariant } = require('../mongoControllers/productController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
 // Optional: Add authMiddleware to these routes to ensure only Admin can modify products

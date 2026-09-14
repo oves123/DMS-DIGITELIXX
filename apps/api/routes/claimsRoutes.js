@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { submitClaim, getClaims, getDistributorClaims, updateClaimStatus, getClaimImage } = require('../controllers/claimsController');
+const { submitClaim, getClaims, getDistributorClaims, updateClaimStatus, getClaimImage } = require('../mongoControllers/claimsController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
 const storage = multer.memoryStorage();

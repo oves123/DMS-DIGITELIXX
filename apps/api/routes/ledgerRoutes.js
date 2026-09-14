@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getInvoices, getInvoiceDetail, recordPayment, recordBulkPayment, getInvoicePayments, getDistributorLedger, downloadInvoicePdf, deleteInvoice, downloadDistributorLedger, issueCreditNote, getCreditNotes, getAllCreditNotes, downloadCreditNote, getCreditNoteItems, getCreditNoteStats } = require('../controllers/ledgerController');
+const { getInvoices, getInvoiceDetail, recordPayment, recordBulkPayment, getInvoicePayments, getDistributorLedger, downloadInvoicePdf, deleteInvoice, downloadDistributorLedger, issueCreditNote, getCreditNotes, getAllCreditNotes, downloadCreditNote, getCreditNoteItems, getCreditNoteStats } = require('../mongoControllers/ledgerController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
 router.get('/', protect, getInvoices);

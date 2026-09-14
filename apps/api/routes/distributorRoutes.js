@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { getDistributors, getDistributorById, getFile, addDistributor, updateDistributor, deleteDistributor, bulkUploadDistributors, getWalletBalance } = require('../controllers/distributorController');
+const { getDistributors, getDistributorById, getFile, addDistributor, updateDistributor, deleteDistributor, bulkUploadDistributors, getWalletBalance } = require('../mongoControllers/distributorController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
 const upload = multer({ storage: multer.memoryStorage() });

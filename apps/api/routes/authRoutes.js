@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { loginUser, resetPassword } = require('../controllers/authController');
+const { loginUser, resetPassword } = require('../mongoControllers/authController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
 // POST /api/auth/login

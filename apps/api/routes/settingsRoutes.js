@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { getCompanySettings, updateCompanySettings, getQRCode } = require('../controllers/settingsController');
+const { getCompanySettings, updateCompanySettings, getQRCode } = require('../mongoControllers/settingsController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
 const storage = multer.memoryStorage();
