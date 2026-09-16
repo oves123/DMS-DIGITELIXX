@@ -1,10 +1,10 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 // ==========================================
 // 1. Users
 // ==========================================
 const userSchema = new mongoose.Schema({
-    sql_user_id: { type: Number, unique: true, sparse: true }, // For migration tracking
+    sql_user_id: { type: Number, unique: true, sparse: true },
     phone: { type: String, required: true, unique: true },
     password_hash: { type: String, required: true },
     role: { type: String, enum: ['SD_ADMIN', 'DISTRIBUTOR', 'SALES_REP', 'OFFLINE_CLIENT'], required: true },
@@ -116,7 +116,7 @@ const invoiceSchema = new mongoose.Schema({
 const paymentSchema = new mongoose.Schema({
     sql_payment_id: { type: Number, unique: true, sparse: true },
     distributor_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    invoice_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' }, // Can be null if advance payment
+    invoice_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' },
     amount: { type: Number, required: true },
     payment_mode: { type: String, required: true },
     reference_number: { type: String },
@@ -143,7 +143,7 @@ const creditNoteSchema = new mongoose.Schema({
     sql_credit_note_id: { type: Number, unique: true, sparse: true },
     distributor_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     invoice_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' },
-    cn_number: { type: String }, // Made optional
+    cn_number: { type: String },
     total_amount: { type: Number, required: true },
     reason: { type: String },
     payment_mode: { type: String },
@@ -173,7 +173,6 @@ const companySettingsSchema = new mongoose.Schema({
 });
 
 // ==========================================
-// ==========================================
 // 10. Inventory
 // ==========================================
 const inventorySchema = new mongoose.Schema({
@@ -201,17 +200,17 @@ const claimSchema = new mongoose.Schema({
 });
 
 const Models = {
-    User: mongoose.model('User', userSchema),
-    Category: mongoose.model('Category', categorySchema),
-    Product: mongoose.model('Product', productSchema),
-    Variant: mongoose.model('Variant', variantSchema),
-    Order: mongoose.model('Order', orderSchema),
-    Invoice: mongoose.model('Invoice', invoiceSchema),
-    Payment: mongoose.model('Payment', paymentSchema),
-    CreditNote: mongoose.model('CreditNote', creditNoteSchema),
-    CompanySettings: mongoose.model('CompanySettings', companySettingsSchema),
-    Inventory: mongoose.model('Inventory', inventorySchema),
-    Claim: mongoose.model('Claim', claimSchema)
+    User: (mongoose.models && mongoose.models.User) || mongoose.model('User', userSchema),
+    Category: (mongoose.models && mongoose.models.Category) || mongoose.model('Category', categorySchema),
+    Product: (mongoose.models && mongoose.models.Product) || mongoose.model('Product', productSchema),
+    Variant: (mongoose.models && mongoose.models.Variant) || mongoose.model('Variant', variantSchema),
+    Order: (mongoose.models && mongoose.models.Order) || mongoose.model('Order', orderSchema),
+    Invoice: (mongoose.models && mongoose.models.Invoice) || mongoose.model('Invoice', invoiceSchema),
+    Payment: (mongoose.models && mongoose.models.Payment) || mongoose.model('Payment', paymentSchema),
+    CreditNote: (mongoose.models && mongoose.models.CreditNote) || mongoose.model('CreditNote', creditNoteSchema),
+    CompanySettings: (mongoose.models && mongoose.models.CompanySettings) || mongoose.model('CompanySettings', companySettingsSchema),
+    Inventory: (mongoose.models && mongoose.models.Inventory) || mongoose.model('Inventory', inventorySchema),
+    Claim: (mongoose.models && mongoose.models.Claim) || mongoose.model('Claim', claimSchema)
 };
 
-module.exports = Models;
+export default Models;

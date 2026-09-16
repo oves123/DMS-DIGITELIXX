@@ -1,6 +1,9 @@
-const Models = require('../mongoModels/index');
+import { Hono } from 'hono';
+import Models from '../db/models';
 
-exports.getMetrics = async (req, res) => {
+const router = new Hono();
+
+router.get('/metrics', async (c) => {
     try {
         const pendingOrders = await Models.Order.countDocuments({ status: 'PENDING' });
         const pendingClaims = await Models.Claim.countDocuments({ status: 'PENDING' });
@@ -47,7 +50,7 @@ exports.getMetrics = async (req, res) => {
             low_stock_threshold: v.inventory ? (v.inventory.low_stock_threshold || 5) : 5
         })).sort((a, b) => a.current_stock - b.current_stock);
 
-        res.json({
+        return c.json({
             pendingOrders,
             pendingClaims,
             totalProducts,
@@ -57,6 +60,8 @@ exports.getMetrics = async (req, res) => {
         });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: 'Server error fetching metrics' });
+        return c.json({ message: 'Server error fetching metrics' }, 500);
     }
-};
+});
+
+export default router;

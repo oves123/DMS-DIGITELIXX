@@ -1,0 +1,22 @@
+{
+  "name": "cloudflare-api",
+  "version": "1.0.0",
+  "description": "DMS API on Cloudflare Workers",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy --minify"
+  },
+  "dependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "bcryptjs": "^3.0.3",
+    "hono": "^4.1.0",
+    "mongoose": "^8.24.4",
+    "pdfmake": "^0.2.10"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240320.1",
+    "@types/pdfmake": "^0.3.3",
+    "typescript": "^5.4.3",
+    "wrangler": "^3.36.0"
+  }
+}

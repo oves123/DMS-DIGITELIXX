@@ -1,0 +1,11 @@
+name = "cloudflare-api"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+main = "src/index.ts"
+
+[build]
+command = "npm install && node patch-mongoose.js"
+
+[[r2_buckets]]
+binding = "MY_BUCKET"
+bucket_name = "dm-pdf"
