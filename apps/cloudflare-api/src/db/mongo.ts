@@ -14,7 +14,10 @@ export const connectDB = async (uri: string) => {
   }
 
   try {
-    await m.connect(uri);
+    await m.connect(uri, { 
+      bufferCommands: false,
+      serverSelectionTimeoutMS: 5000 
+    });
     isConnected = true;
     console.log('MongoDB connected successfully on the Edge');
   } catch (error) {
