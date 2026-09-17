@@ -20,8 +20,16 @@ export const connectDB = async (uri: string) => {
     });
     isConnected = true;
     console.log('MongoDB connected successfully on the Edge');
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
-    throw error;
+  } catch (err: any) {
+    console.error("MONGODB ERROR", {
+      name: err?.name,
+      message: err?.message,
+      code: err?.code,
+      codeName: err?.codeName,
+      reason: err?.reason?.message,
+      cause: err?.cause?.message,
+      stack: err?.stack
+    });
+    throw err;
   }
 };
