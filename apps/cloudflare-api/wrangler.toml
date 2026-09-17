@@ -1,6 +1,6 @@
 name = "dms-digitelixx"
 compatibility_date = "2024-11-01"
-compatibility_flags = ["nodejs_compat"]
+compatibility_flags = ["nodejs_compat_v2"]
 main = "src/index.ts"
 
 [build]

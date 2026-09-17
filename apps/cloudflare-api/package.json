@@ -17,6 +17,6 @@
     "@cloudflare/workers-types": "^4.20240320.1",
     "@types/pdfmake": "^0.3.3",
     "typescript": "^5.4.3",
-    "wrangler": "^3.36.0"
+    "wrangler": "^4.133.0"
   }
 }

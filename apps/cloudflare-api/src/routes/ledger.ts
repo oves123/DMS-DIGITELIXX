@@ -564,4 +564,34 @@ router.get('/credit-note/:cn_id/download', async (c) => {
     }
 });
 
+// GET /api/ledger/credit-note-stats
+router.get('/credit-note-stats', async (c) => {
+    try {
+        const notes = await Models.CreditNote.find().lean();
+        const reasonCount: Record<string, number> = {};
+        notes.forEach((cn: any) => {
+            (cn.items || []).forEach((item: any) => {
+                if (item.reason) {
+                    reasonCount[item.reason] = (reasonCount[item.reason] || 0) + 1;
+                }
+            });
+        });
+
+        let topReason = 'N/A';
+        let maxCount = 0;
+        for (const [reason, count] of Object.entries(reasonCount)) {
+            if ((count as number) > maxCount) {
+                maxCount = count as number;
+                topReason = reason;
+            }
+        }
+
+        return c.json({ topReason });
+    } catch (err) {
+        console.error(err);
+        return c.json({ message: 'Server Error fetching credit note stats' }, 500);
+    }
+});
+
 export default router;
+
