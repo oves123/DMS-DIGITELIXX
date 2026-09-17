@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-const MONGO_URI = 'mongodb://client_admin:mwB3r23ehlW0Lvmd@ac-wiv8wxz-shard-00-00.zylwuu6.mongodb.net:27017,ac-wiv8wxz-shard-00-01.zylwuu6.mongodb.net:27017,ac-wiv8wxz-shard-00-02.zylwuu6.mongodb.net:27017/DMS?ssl=true&replicaSet=atlas-22cj8k-shard-0&authSource=admin';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://login_db_user:ZCptqugt1GofEQSi@cluster0.b5wi4hl.mongodb.net/DMS?retryWrites=true&w=majority';
 
 const connectDB = async () => {
     try {

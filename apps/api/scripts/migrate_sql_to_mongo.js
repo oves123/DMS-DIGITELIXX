@@ -15,7 +15,7 @@ const sqlConfig = {
     }
 };
 
-const MONGO_URI = 'mongodb+srv://client_admin:mwB3r23ehlW0Lvmd@cluster0.zylwuu6.mongodb.net/DMS';
+const MONGO_URI = 'mongodb+srv://login_db_user:ZCptqugt1GofEQSi@cluster0.b5wi4hl.mongodb.net/DMS?retryWrites=true&w=majority';
 
 async function migrate() {
     try {
