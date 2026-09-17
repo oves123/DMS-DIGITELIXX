@@ -81,7 +81,7 @@ const AddProduct = () => {
       await api.post('/api/products', payload);
       navigate('/admin/products');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to add product');
+      setError(err.response?.data?.message || 'Failed to add products');
     } finally {
       setLoading(false);
     }
