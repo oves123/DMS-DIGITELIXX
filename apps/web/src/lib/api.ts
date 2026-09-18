@@ -1,7 +1,17 @@
 import axios from 'axios';
+import axiosRetry from 'axios-retry';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '',
+});
+
+// Configure automatic retries for serverless cold start timeouts (500 errors from CPU limits)
+axiosRetry(api, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: (error) => {
+    return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status === 500;
+  }
 });
 
 // Add a request interceptor to include the auth token

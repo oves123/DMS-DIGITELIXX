@@ -1,25 +1,29 @@
 import mongoose from 'mongoose';
 const m = (mongoose as any).default || mongoose;
 
-let isConnected = false;
+let connectionPromise: Promise<any> | null = null;
 
 export const connectDB = async (uri: string) => {
-  if (isConnected) {
+  if (m.connection && m.connection.readyState === 1) {
     return;
   }
 
-  if (m.connection && m.connection.readyState === 1) {
-    isConnected = true;
-    return;
+  if (!connectionPromise) {
+    connectionPromise = m.connect(uri, { 
+      bufferCommands: false,
+      serverSelectionTimeoutMS: 5000,
+      maxPoolSize: 1,
+      minPoolSize: 0
+    }).then(() => {
+      console.log('MongoDB connected successfully on the Edge');
+    }).catch((err: any) => {
+      connectionPromise = null;
+      throw err;
+    });
   }
 
   try {
-    await m.connect(uri, { 
-      bufferCommands: false,
-      serverSelectionTimeoutMS: 5000 
-    });
-    isConnected = true;
-    console.log('MongoDB connected successfully on the Edge');
+    await connectionPromise;
   } catch (err: any) {
     console.error("MONGODB ERROR", {
       name: err?.name,

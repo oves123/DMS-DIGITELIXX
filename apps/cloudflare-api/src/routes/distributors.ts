@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import Models from '../db/models';
 import bcrypt from 'bcryptjs';
+import { hashPassword } from '../utils/hash';
 
 const router = new Hono();
 
@@ -134,8 +135,7 @@ router.post('/', async (c) => {
             return c.json({ message: 'Phone number already registered' }, 400);
         }
 
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password as string, salt);
+        const hashedPassword = hashPassword(password as string);
 
         await Models.User.create({
             role: 'DISTRIBUTOR',
@@ -189,8 +189,7 @@ router.put('/:id', async (c) => {
         user.rate_version = (rate_version as string) || user.rate_version;
 
         if (password) {
-            const salt = await bcrypt.genSalt(10);
-            user.password_hash = await bcrypt.hash(password as string, salt);
+            user.password_hash = hashPassword(password as string);
         }
 
         const panFile = body['panFile'] as File | undefined;
@@ -273,8 +272,7 @@ router.post('/bulk', async (c) => {
                     continue; 
                 }
 
-                const salt = await bcrypt.genSalt(10);
-                const hashedPassword = await bcrypt.hash(password, salt);
+                const hashedPassword = hashPassword(password);
 
                 await Models.User.create({
                     role: 'DISTRIBUTOR',

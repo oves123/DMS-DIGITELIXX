@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { sign } from 'hono/jwt';
 import bcrypt from 'bcryptjs';
 import Models from '../db/models';
-
+import { hashPassword } from '../utils/hash';
 const router = new Hono<{ Bindings: { JWT_SECRET: string } }>();
 
 router.post('/login', async (c) => {
@@ -14,14 +14,31 @@ router.post('/login', async (c) => {
             return c.json({ message: 'Please provide phone number and password' }, 400);
         }
 
-        const user = await Models.User.findOne({ phone: phone_number }) as any;
+        const user = await Models.User.findOne({ phone: phone_number }).lean() as any;
 
         if (!user) {
             return c.json({ message: 'Invalid credentials' }, 401);
         }
 
-        const isMatch = await bcrypt.compare(password, user.password_hash).catch(() => false);
-        if (!isMatch && password !== user.password_hash) {
+        // Check if the hash matches using SHA-256 (new method) or if it's plaintext
+        let isMatch = false;
+        const hashedInput = await hashPassword(password);
+        
+        // We accept both the SHA-256 hash or plaintext password for smooth transition
+        if (hashedInput === user.password_hash || password === user.password_hash) {
+            isMatch = true;
+        } else {
+            // Also accept bcrypt if we haven't hit the CPU limit yet (fallback)
+            if (user.password_hash && user.password_hash.startsWith('$2')) {
+                try {
+                    isMatch = bcrypt.compareSync(password, user.password_hash);
+                } catch (e) {
+                    console.error('Bcrypt Error:', e);
+                }
+            }
+        }
+        
+        if (!isMatch) {
             return c.json({ message: 'Invalid credentials' }, 401);
         }
 
@@ -49,9 +66,9 @@ router.post('/login', async (c) => {
             }
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Login Error:', error);
-        return c.json({ message: 'Server error during login' }, 500);
+        return c.json({ message: 'Server error during login', error: error?.message, stack: error?.stack }, 500);
     }
 });
 
@@ -64,8 +81,7 @@ router.put('/reset-password', async (c) => {
             return c.json({ message: 'Please provide user id and new password' }, 400);
         }
 
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(new_password, salt);
+        const hashedPassword = await hashPassword(new_password);
 
         await Models.User.findOneAndUpdate(
             { sql_user_id: user_id }, 

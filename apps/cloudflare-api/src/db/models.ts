@@ -200,17 +200,17 @@ const claimSchema = new mongoose.Schema({
 });
 
 const Models = {
-    User: (mongoose.models && mongoose.models.User) || mongoose.model('User', userSchema),
-    Category: (mongoose.models && mongoose.models.Category) || mongoose.model('Category', categorySchema),
-    Product: (mongoose.models && mongoose.models.Product) || mongoose.model('Product', productSchema),
-    Variant: (mongoose.models && mongoose.models.Variant) || mongoose.model('Variant', variantSchema),
-    Order: (mongoose.models && mongoose.models.Order) || mongoose.model('Order', orderSchema),
-    Invoice: (mongoose.models && mongoose.models.Invoice) || mongoose.model('Invoice', invoiceSchema),
-    Payment: (mongoose.models && mongoose.models.Payment) || mongoose.model('Payment', paymentSchema),
-    CreditNote: (mongoose.models && mongoose.models.CreditNote) || mongoose.model('CreditNote', creditNoteSchema),
-    CompanySettings: (mongoose.models && mongoose.models.CompanySettings) || mongoose.model('CompanySettings', companySettingsSchema),
-    Inventory: (mongoose.models && mongoose.models.Inventory) || mongoose.model('Inventory', inventorySchema),
-    Claim: (mongoose.models && mongoose.models.Claim) || mongoose.model('Claim', claimSchema)
+    get User() { return (mongoose.models && mongoose.models.User) || mongoose.model('User', userSchema) },
+    get Category() { return (mongoose.models && mongoose.models.Category) || mongoose.model('Category', categorySchema) },
+    get Product() { return (mongoose.models && mongoose.models.Product) || mongoose.model('Product', productSchema) },
+    get Variant() { return (mongoose.models && mongoose.models.Variant) || mongoose.model('Variant', variantSchema) },
+    get Order() { return (mongoose.models && mongoose.models.Order) || mongoose.model('Order', orderSchema) },
+    get Invoice() { return (mongoose.models && mongoose.models.Invoice) || mongoose.model('Invoice', invoiceSchema) },
+    get Payment() { return (mongoose.models && mongoose.models.Payment) || mongoose.model('Payment', paymentSchema) },
+    get CreditNote() { return (mongoose.models && mongoose.models.CreditNote) || mongoose.model('CreditNote', creditNoteSchema) },
+    get CompanySettings() { return (mongoose.models && mongoose.models.CompanySettings) || mongoose.model('CompanySettings', companySettingsSchema) },
+    get Inventory() { return (mongoose.models && mongoose.models.Inventory) || mongoose.model('Inventory', inventorySchema) },
+    get Claim() { return (mongoose.models && mongoose.models.Claim) || mongoose.model('Claim', claimSchema) }
 };
 
 export default Models;

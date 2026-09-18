@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "bcrypt-edge": "^0.1.1",
     "bcryptjs": "^3.0.3",
     "hono": "^4.1.0",
     "mongoose": "^8.24.4",
