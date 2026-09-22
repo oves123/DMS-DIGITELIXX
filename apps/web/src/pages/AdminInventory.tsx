@@ -307,7 +307,7 @@ const AdminInventory = () => {
                             style={{ background: '#f1f5f9', cursor: 'pointer', borderBottom: '1px solid #e2e8f0' }}
                             onClick={() => toggleExpand(product.product_id)}
                           >
-                            <td colSpan={3} style={{ padding: '10px 12px', fontWeight: 'bold', color: '#0f172a', fontSize: '14px' }}>
+                            <td style={{ padding: '10px 12px', fontWeight: 'bold', color: '#0f172a', fontSize: '14px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <span style={{ display: 'inline-block', width: '16px', color: '#64748b', textAlign: 'center' }}>
                                   {isExpanded ? '▼' : '▶'}
@@ -326,6 +326,10 @@ const AdminInventory = () => {
                                 </div>
                               </div>
                             </td>
+                            <td style={{ padding: '10px 12px', color: '#0f172a', fontSize: '14px', fontWeight: 500 }}>
+                              {product.category_name || '-'}
+                            </td>
+                            <td></td>
                             <td style={{ padding: '10px 12px', fontWeight: 'bold', color: '#0f172a', textAlign: 'center' }}>
                               {totalProdStock} Total
                             </td>
@@ -344,11 +348,12 @@ const AdminInventory = () => {
                             
                             return (
                             <tr key={item.variant_id} style={{ background: '#fff', borderBottom: '1px solid #e2e8f0' }}>
-                              <td style={{ padding: '8px 12px', paddingLeft: '80px', color: '#64748b', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#cbd5e1' }}></div>
-                                {item.pack_size}
+                              <td colSpan={2} style={{ padding: '8px 12px', paddingLeft: '80px', color: '#94a3b8', fontSize: '13px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <div style={{ width: '12px', height: '12px', borderLeft: '2px solid #cbd5e1', borderBottom: '2px solid #cbd5e1', borderRadius: '0 0 0 4px', marginTop: '-12px' }}></div>
+                                  Variant
+                                </div>
                               </td>
-                              <td style={{ padding: '8px 12px', color: '#64748b', fontSize: '13px' }}>{product.category_name || '-'}</td>
                               <td style={{ padding: '8px 12px', color: '#0f172a', fontWeight: 500, fontSize: '13px' }}>{item.pack_size}</td>
                               
                               <td 

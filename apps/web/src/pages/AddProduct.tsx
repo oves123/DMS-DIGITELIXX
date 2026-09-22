@@ -17,7 +17,7 @@ const AddProduct = () => {
 
   // Variants State
   const [variants, setVariants] = useState<any[]>([
-    { pack_size: '', uom: 'Box', pieces_per_box: '', distributor_rate: '', retailer_rate: '', mrp: '' }
+    { pack_size: '', uom: 'Box', pieces_per_box: '', distributor_rate: '', retailer_rate: '', old_distributor_rate: '', old_retailer_rate: '', mrp: '', rate_type: 'new' }
   ]);
 
   useEffect(() => {
@@ -34,7 +34,7 @@ const AddProduct = () => {
   };
 
   const addVariantRow = () => {
-    setVariants([...variants, { pack_size: '', uom: 'Box', pieces_per_box: '', distributor_rate: '', retailer_rate: '', mrp: '' }]);
+    setVariants([...variants, { pack_size: '', uom: 'Box', pieces_per_box: '', distributor_rate: '', retailer_rate: '', old_distributor_rate: '', old_retailer_rate: '', mrp: '', rate_type: 'new' }]);
   };
 
   const removeVariantRow = (index: number) => {
@@ -70,12 +70,21 @@ const AddProduct = () => {
         category_id: finalCategoryId === 'NEW' || !finalCategoryId ? null : parseInt(finalCategoryId),
         hsn_code: hsnCode,
         gst_percent: parseFloat(gstPercent) || 0,
-        variants: variants.map(v => ({
-          ...v,
-          nd_rate: parseFloat(v.nd_rate) || 0,
-          retailer_rate: parseFloat(v.retailer_rate) || 0,
-          mrp: parseFloat(v.mrp) || 0
-        }))
+        variants: variants.map(v => {
+          let d_rate = v.rate_type === 'old' ? 0 : parseFloat(v.distributor_rate) || 0;
+          let r_rate = v.rate_type === 'old' ? 0 : parseFloat(v.retailer_rate) || 0;
+          let old_d_rate = v.rate_type === 'new' ? null : parseFloat(v.old_distributor_rate) || null;
+          let old_r_rate = v.rate_type === 'new' ? null : parseFloat(v.old_retailer_rate) || null;
+
+          return {
+            ...v,
+            distributor_rate: d_rate,
+            retailer_rate: r_rate,
+            old_distributor_rate: old_d_rate,
+            old_retailer_rate: old_r_rate,
+            mrp: parseFloat(v.mrp) || 0
+          };
+        })
       };
 
       await api.post('/api/products', payload);
@@ -155,36 +164,71 @@ const AddProduct = () => {
           </div>
 
           {variants.map((v, index) => (
-            <div key={index} className="variant-row" style={{ display: 'flex', gap: '16px', marginBottom: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              <div className="input-group" style={{ marginBottom: 0, flex: 1, minWidth: '150px' }}>
-                <label>Pack Size * (e.g. 50g)</label>
-                <input type="text" required value={v.pack_size} onChange={e => handleVariantChange(index, 'pack_size', e.target.value)} />
+            <div key={index} className="variant-row" style={{ display: 'flex', gap: '16px', marginBottom: '16px', alignItems: 'flex-end', flexWrap: 'wrap', background: '#f8fafc', padding: '16px', borderRadius: '8px' }}>
+              
+              {/* Row 1: Basic Info */}
+              <div style={{ display: 'flex', gap: '16px', width: '100%', flexWrap: 'wrap' }}>
+                <div className="input-group" style={{ marginBottom: 0, flex: 1, minWidth: '150px' }}>
+                  <label>Pack Size * (e.g. 50g)</label>
+                  <input type="text" required value={v.pack_size} onChange={e => handleVariantChange(index, 'pack_size', e.target.value)} />
+                </div>
+                <div className="input-group" style={{ marginBottom: 0, flex: 1, minWidth: '100px' }}>
+                  <label>Pcs/Box</label>
+                  <input type="number" min="1" placeholder="Auto" value={v.pieces_per_box} onChange={e => handleVariantChange(index, 'pieces_per_box', e.target.value)} />
+                </div>
+                <div className="input-group" style={{ marginBottom: 0, flex: 1, minWidth: '90px' }}>
+                  <label>UOM</label>
+                  <input type="text" value={v.uom} onChange={e => handleVariantChange(index, 'uom', e.target.value)} />
+                </div>
+                <div className="input-group" style={{ marginBottom: 0, flex: 1, minWidth: '150px' }}>
+                  <label>Rate Type</label>
+                  <select value={v.rate_type} onChange={e => handleVariantChange(index, 'rate_type', e.target.value)}>
+                    <option value="new">New Rates Only</option>
+                    <option value="old">Old Rates Only</option>
+                    <option value="both">Both Rates</option>
+                  </select>
+                </div>
               </div>
-              <div className="input-group" style={{ marginBottom: 0, flex: 1, minWidth: '100px' }}>
-                <label>Pcs/Box</label>
-                <input type="number" min="1" placeholder="Auto" value={v.pieces_per_box} onChange={e => handleVariantChange(index, 'pieces_per_box', e.target.value)} />
+
+              {/* Row 2: Pricing */}
+              <div style={{ display: 'flex', gap: '16px', width: '100%', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                {v.rate_type !== 'old' && (
+                  <>
+                    <div className="input-group" style={{ marginBottom: 0, flex: 1 }}>
+                      <label>New D. Rate (₹)</label>
+                      <input type="number" step="0.01" required={v.rate_type !== 'old'} value={v.distributor_rate} onChange={e => handleVariantChange(index, 'distributor_rate', e.target.value)} />
+                    </div>
+                    <div className="input-group" style={{ marginBottom: 0, flex: 1 }}>
+                      <label>New R. Rate (₹)</label>
+                      <input type="number" step="0.01" required={v.rate_type !== 'old'} value={v.retailer_rate} onChange={e => handleVariantChange(index, 'retailer_rate', e.target.value)} />
+                    </div>
+                  </>
+                )}
+                
+                {v.rate_type !== 'new' && (
+                  <>
+                    <div className="input-group" style={{ marginBottom: 0, flex: 1 }}>
+                      <label>Old D. Rate (₹)</label>
+                      <input type="number" step="0.01" required={v.rate_type !== 'new'} value={v.old_distributor_rate} onChange={e => handleVariantChange(index, 'old_distributor_rate', e.target.value)} />
+                    </div>
+                    <div className="input-group" style={{ marginBottom: 0, flex: 1 }}>
+                      <label>Old R. Rate (₹)</label>
+                      <input type="number" step="0.01" required={v.rate_type !== 'new'} value={v.old_retailer_rate} onChange={e => handleVariantChange(index, 'old_retailer_rate', e.target.value)} />
+                    </div>
+                  </>
+                )}
+                
+                <div className="input-group" style={{ marginBottom: 0, flex: 1 }}>
+                  <label>MRP (₹)</label>
+                  <input type="number" step="0.01" required value={v.mrp} onChange={e => handleVariantChange(index, 'mrp', e.target.value)} />
+                </div>
+                
+                {variants.length > 1 && (
+                  <button type="button" onClick={() => removeVariantRow(index)} style={{ padding: '12px', background: 'transparent', color: '#ef4444', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
+                    X
+                  </button>
+                )}
               </div>
-              <div className="input-group" style={{ marginBottom: 0, flex: 1, minWidth: '90px' }}>
-                <label>UOM</label>
-                <input type="text" value={v.uom} onChange={e => handleVariantChange(index, 'uom', e.target.value)} />
-              </div>
-              <div className="input-group" style={{ marginBottom: 0, flex: 1, minWidth: '120px' }}>
-                <label>Distributor Rate (₹)</label>
-                <input type="number" step="0.01" required value={v.distributor_rate} onChange={e => handleVariantChange(index, 'distributor_rate', e.target.value)} />
-              </div>
-              <div className="input-group" style={{ marginBottom: 0 }}>
-                <label>Retailer Rate (₹)</label>
-                <input type="number" step="0.01" required value={v.retailer_rate} onChange={e => handleVariantChange(index, 'retailer_rate', e.target.value)} />
-              </div>
-              <div className="input-group" style={{ marginBottom: 0 }}>
-                <label>MRP (₹)</label>
-                <input type="number" step="0.01" required value={v.mrp} onChange={e => handleVariantChange(index, 'mrp', e.target.value)} />
-              </div>
-              {variants.length > 1 && (
-                <button type="button" onClick={() => removeVariantRow(index)} style={{ padding: '12px', background: 'transparent', color: '#ef4444', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
-                  X
-                </button>
-              )}
             </div>
           ))}
 

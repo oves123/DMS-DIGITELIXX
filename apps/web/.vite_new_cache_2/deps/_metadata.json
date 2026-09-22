@@ -1,93 +1,95 @@
 {
-  "hash": "c8a31886",
+  "hash": "dc56d398",
   "configHash": "f8e58a13",
-  "lockfileHash": "1c5a4a3e",
-  "browserHash": "937f286b",
+  "lockfileHash": "8313dd3c",
+  "browserHash": "d65489c8",
   "optimized": {
     "axios": {
       "src": "../../../../node_modules/axios/index.js",
       "file": "axios.js",
-      "fileHash": "a5c550eb",
+      "fileHash": "47be953d",
       "needsInterop": false
+    },
+    "html2canvas": {
+      "src": "../../../../node_modules/html2canvas/dist/html2canvas.js",
+      "file": "html2canvas.js",
+      "fileHash": "618ff654",
+      "needsInterop": true
     },
     "jspdf-autotable": {
       "src": "../../../../node_modules/jspdf-autotable/dist/jspdf.plugin.autotable.mjs",
       "file": "jspdf-autotable.js",
-      "fileHash": "f4ffcf42",
+      "fileHash": "0151d03c",
       "needsInterop": false
     },
     "jspdf": {
       "src": "../../../../node_modules/jspdf/dist/jspdf.es.min.js",
       "file": "jspdf.js",
-      "fileHash": "0189fe7d",
+      "fileHash": "bead5673",
       "needsInterop": false
     },
     "lucide-react": {
       "src": "../../../../node_modules/lucide-react/dist/esm/lucide-react.mjs",
       "file": "lucide-react.js",
-      "fileHash": "90a63024",
+      "fileHash": "0419f794",
       "needsInterop": false
     },
     "papaparse": {
       "src": "../../../../node_modules/papaparse/papaparse.min.js",
       "file": "papaparse.js",
-      "fileHash": "4ebed470",
+      "fileHash": "e5d1295c",
       "needsInterop": true
     },
     "react-dom": {
       "src": "../../../../node_modules/react-dom/index.js",
       "file": "react-dom.js",
-      "fileHash": "3b6009b4",
+      "fileHash": "3e57c3ad",
       "needsInterop": true
     },
     "react-dom/client": {
       "src": "../../../../node_modules/react-dom/client.js",
       "file": "react-dom_client.js",
-      "fileHash": "52b6c636",
+      "fileHash": "eed45790",
       "needsInterop": true
     },
     "react-router-dom": {
       "src": "../../../../node_modules/react-router-dom/dist/index.mjs",
       "file": "react-router-dom.js",
-      "fileHash": "511851dc",
+      "fileHash": "24e21409",
       "needsInterop": false
     },
     "react": {
       "src": "../../../../node_modules/react/index.js",
       "file": "react.js",
-      "fileHash": "0c525a83",
+      "fileHash": "fd6827b2",
       "needsInterop": true
     },
     "react/jsx-dev-runtime": {
       "src": "../../../../node_modules/react/jsx-dev-runtime.js",
       "file": "react_jsx-dev-runtime.js",
-      "fileHash": "f8c5573a",
+      "fileHash": "a48591d3",
       "needsInterop": true
     },
     "react/jsx-runtime": {
       "src": "../../../../node_modules/react/jsx-runtime.js",
       "file": "react_jsx-runtime.js",
-      "fileHash": "bfe01821",
+      "fileHash": "c7f5ef3c",
       "needsInterop": true
     },
     "recharts": {
       "src": "../../../../node_modules/recharts/es6/index.js",
       "file": "recharts.js",
-      "fileHash": "be579219",
+      "fileHash": "376bb1cf",
       "needsInterop": false
     },
     "xlsx": {
       "src": "../../../../node_modules/xlsx/xlsx.mjs",
       "file": "xlsx.js",
-      "fileHash": "fa9dabca",
+      "fileHash": "a5af9611",
       "needsInterop": false
     }
   },
   "chunks": {
-    "html2canvas-Do2eRrdJ": {
-      "file": "html2canvas-Do2eRrdJ.js",
-      "isDynamicEntry": true
-    },
     "index.es-0KZWlno5": {
       "file": "index.es-0KZWlno5.js",
       "isDynamicEntry": true

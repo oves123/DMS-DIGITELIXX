@@ -8,6 +8,14 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+const formatIndianNumber = (num: number) => {
+  if (isNaN(num)) return '0.00';
+  return num.toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
+
 const AdminReports = () => {
   const [salesData, setSalesData] = useState([]);
   const [productData, setProductData] = useState([]);
@@ -396,7 +404,7 @@ const AdminReports = () => {
               PRIMARY SALES
             </p>
             <h2 style={{ margin: '4px 0 0 0', color: '#1e293b', fontSize: '32px', fontWeight: 600 }}>
-              {salesData.reduce((acc: number, curr: any) => acc + (Number(curr.total_revenue) || 0), 0).toFixed(2)}
+              ₹{formatIndianNumber(salesData.reduce((acc: number, curr: any) => acc + (Number(curr.total_revenue) || 0), 0))}
             </h2>
           </div>
         </div>
@@ -435,10 +443,10 @@ const AdminReports = () => {
           <div style={{ height: '450px', width: '100%' }}>
             {productData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={productData} layout="vertical" margin={{ top: 5, right: 30, left: 50, bottom: 5 }}>
+                <BarChart data={productData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
                   <XAxis type="number" hide />
-                  <YAxis dataKey="product_name" type="category" tick={{fill: '#475569', fontSize: 12}} width={100} />
+                  <YAxis dataKey="product_name" type="category" tick={{fill: '#475569', fontSize: 12}} width={140} tickFormatter={(value) => value.length > 20 ? value.substring(0, 20) + '...' : value} />
                   <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
                   <Bar dataKey="total_sold" fill="#10b981" radius={[0, 4, 4, 0]} name="Qty Sold" />
                 </BarChart>
@@ -678,22 +686,22 @@ const AdminReports = () => {
                     <th style={{ padding: '12px', background: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#334155', fontWeight: 700, fontSize: '13px' }}>BILL NO</th>
                     <th style={{ padding: '12px', background: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#334155', fontWeight: 700, fontSize: '13px' }}>FIRM NAME</th>
                     <th style={{ padding: '12px', background: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#334155', fontWeight: 700, fontSize: '13px' }}>TOWN</th>
-                    <th style={{ padding: '12px', background: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#334155', fontWeight: 700, fontSize: '13px' }}>TAXABLE AMOUNT</th>
-                    <th style={{ padding: '12px', background: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#334155', fontWeight: 700, fontSize: '13px' }}>GST AMOUNT</th>
-                    <th style={{ padding: '12px', background: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#334155', fontWeight: 700, fontSize: '13px' }}>TOTAL AMOUNT</th>
+                    <th style={{ padding: '12px', background: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#334155', fontWeight: 700, fontSize: '13px', textAlign: 'right' }}>TAXABLE AMOUNT</th>
+                    <th style={{ padding: '12px', background: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#334155', fontWeight: 700, fontSize: '13px', textAlign: 'right' }}>GST AMOUNT</th>
+                    <th style={{ padding: '12px', background: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#334155', fontWeight: 700, fontSize: '13px', textAlign: 'right' }}>TOTAL AMOUNT</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredTransactions.length > 0 ? filteredTransactions.map((t, i) => (
                     <tr key={i} style={{ borderBottom: '1px solid #e2e8f0' }}>
                       <td style={{ padding: '10px 12px', fontSize: '13px', color: '#64748b' }}>{i + 1}</td>
-                      <td style={{ padding: '10px 12px', fontSize: '13px' }}>{new Date(t.date).toLocaleDateString('en-GB')}</td>
-                      <td style={{ padding: '10px 12px', fontSize: '13px', fontWeight: 500, color: 'var(--primary)' }}>{t.invoice_number}</td>
+                      <td style={{ padding: '10px 12px', fontSize: '13px', whiteSpace: 'nowrap' }}>{new Date(t.date).toLocaleDateString('en-GB')}</td>
+                      <td style={{ padding: '10px 12px', fontSize: '13px', fontWeight: 500, color: 'var(--primary)', whiteSpace: 'nowrap' }}>{t.invoice_number}</td>
                       <td style={{ padding: '10px 12px', fontSize: '13px', fontWeight: 500 }}>{t.firm_name}</td>
-                      <td style={{ padding: '10px 12px', fontSize: '13px', color: '#64748b' }}>{t.town || '-'}</td>
-                      <td style={{ padding: '10px 12px', fontSize: '13px' }}>₹{t.taxable_amount.toFixed(2)}</td>
-                      <td style={{ padding: '10px 12px', fontSize: '13px' }}>₹{t.gst_amount.toFixed(2)}</td>
-                      <td style={{ padding: '10px 12px', fontSize: '13px', fontWeight: 600, color: '#059669' }}>₹{t.total_amount.toFixed(2)}</td>
+                      <td style={{ padding: '10px 12px', fontSize: '13px', color: '#64748b', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={t.town}>{t.town || '-'}</td>
+                      <td style={{ padding: '10px 12px', fontSize: '13px', whiteSpace: 'nowrap', textAlign: 'right' }}>₹{t.taxable_amount.toFixed(2)}</td>
+                      <td style={{ padding: '10px 12px', fontSize: '13px', whiteSpace: 'nowrap', textAlign: 'right' }}>₹{t.gst_amount.toFixed(2)}</td>
+                      <td style={{ padding: '10px 12px', fontSize: '13px', fontWeight: 600, color: '#059669', whiteSpace: 'nowrap', textAlign: 'right' }}>₹{t.total_amount.toFixed(2)}</td>
                     </tr>
                   )) : (
                     <tr>
@@ -706,9 +714,9 @@ const AdminReports = () => {
                 <tfoot style={{ position: 'sticky', bottom: 0, zIndex: 10 }}>
                   <tr>
                     <td colSpan={5} style={{ padding: '12px', background: '#f8fafc', borderTop: '2px solid #cbd5e1', color: '#334155', fontWeight: 700, fontSize: '13px', textAlign: 'right' }}>GRAND TOTAL:</td>
-                    <td style={{ padding: '12px', background: '#f8fafc', borderTop: '2px solid #cbd5e1', color: '#334155', fontWeight: 700, fontSize: '13px' }}>₹{filteredTransactions.reduce((sum, t) => sum + t.taxable_amount, 0).toFixed(2)}</td>
-                    <td style={{ padding: '12px', background: '#f8fafc', borderTop: '2px solid #cbd5e1', color: '#334155', fontWeight: 700, fontSize: '13px' }}>₹{filteredTransactions.reduce((sum, t) => sum + t.gst_amount, 0).toFixed(2)}</td>
-                    <td style={{ padding: '12px', background: '#ecfdf5', borderTop: '2px solid #10b981', color: '#047857', fontWeight: 700, fontSize: '14px' }}>₹{filteredTransactions.reduce((sum, t) => sum + t.total_amount, 0).toFixed(2)}</td>
+                    <td style={{ padding: '12px', background: '#f8fafc', borderTop: '2px solid #cbd5e1', color: '#334155', fontWeight: 700, fontSize: '13px', textAlign: 'right' }}>₹{filteredTransactions.reduce((sum, t) => sum + t.taxable_amount, 0).toFixed(2)}</td>
+                    <td style={{ padding: '12px', background: '#f8fafc', borderTop: '2px solid #cbd5e1', color: '#334155', fontWeight: 700, fontSize: '13px', textAlign: 'right' }}>₹{filteredTransactions.reduce((sum, t) => sum + t.gst_amount, 0).toFixed(2)}</td>
+                    <td style={{ padding: '12px', background: '#ecfdf5', borderTop: '2px solid #10b981', color: '#047857', fontWeight: 700, fontSize: '14px', textAlign: 'right' }}>₹{filteredTransactions.reduce((sum, t) => sum + t.total_amount, 0).toFixed(2)}</td>
                   </tr>
                 </tfoot>
               </table>

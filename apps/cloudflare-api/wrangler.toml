@@ -9,3 +9,9 @@ command = "npm install && node patch-mongoose.js"
 [[r2_buckets]]
 binding = "MY_BUCKET"
 bucket_name = "dm-pdf"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dms-db"
+database_id = "e84d4121-f033-4dfc-b408-d0c366a36c08"
+migrations_dir = "drizzle"

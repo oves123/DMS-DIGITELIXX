@@ -12,7 +12,8 @@ const AdminEditOrder = () => {
   const [products, setProducts] = useState<any[]>([]);
   
   const [selectedClient, setSelectedClient, clearClient] = useAutoSave<any>(`admin_edit_order_${id}_client`, null);
-  const [pricingTier, setPricingTier] = useState<'distributor' | 'retailer'>('distributor');
+  const [pricingTier, setPricingTier, clearPricingTier] = useAutoSave<'distributor' | 'retailer'>(`admin_edit_order_${id}_pricing_tier`, 'distributor');
+  const [priceListVersion, setPriceListVersion, clearPriceListVersion] = useAutoSave<'new' | 'old'>(`admin_edit_order_${id}_price_version`, 'new');
   
   const [cart, setCart, clearCart] = useAutoSave<{ [key: number]: { qty: number, variant: any, price: number, product_name?: string } }>(`admin_edit_order_${id}_cart`, {});
   
@@ -75,6 +76,7 @@ const AdminEditOrder = () => {
         setSelectedClient(client);
         if (client) {
             setPricingTier(client.rate_type || 'distributor');
+            setPriceListVersion(client.rate_version === 'old' ? 'old' : 'new');
         }
         
         // Populate cart
@@ -125,6 +127,14 @@ const AdminEditOrder = () => {
     }
   };
 
+  const getPrice = (variant: any) => {
+    if (priceListVersion === 'old') {
+        if (pricingTier === 'retailer' && variant.old_retailer_rate != null) return variant.old_retailer_rate;
+        if (pricingTier === 'distributor' && variant.old_distributor_rate != null) return variant.old_distributor_rate;
+    }
+    return pricingTier === 'retailer' ? variant.retailer_rate : variant.distributor_rate;
+  };
+
   const updateCart = (variant: any, delta: number, productName?: string) => {
     setCart(prev => {
       const current = prev[variant.variant_id]?.qty || 0;
@@ -140,7 +150,7 @@ const AdminEditOrder = () => {
       if (next <= 0) {
         delete newCart[variant.variant_id];
       } else {
-        const price = pricingTier === 'retailer' ? variant.retailer_rate : variant.distributor_rate;
+        const price = getPrice(variant);
         newCart[variant.variant_id] = { 
           qty: next, 
           variant, 
@@ -165,7 +175,7 @@ const AdminEditOrder = () => {
       if (finalQty <= 0 || isNaN(finalQty)) {
         delete newCart[variant.variant_id];
       } else {
-        const price = pricingTier === 'retailer' ? variant.retailer_rate : variant.distributor_rate;
+        const price = getPrice(variant);
         newCart[variant.variant_id] = { 
           qty: finalQty, 
           variant, 
@@ -178,17 +188,17 @@ const AdminEditOrder = () => {
     });
   };
 
-  // Re-calculate cart prices if pricing tier changes
+  // Re-calculate cart prices if pricing tier or price list changes
   useEffect(() => {
     setCart(prev => {
       const newCart = { ...prev };
       Object.keys(newCart).forEach(key => {
         const item = newCart[parseInt(key)];
-        item.price = pricingTier === 'retailer' ? item.variant.retailer_rate : item.variant.distributor_rate;
+        item.price = getPrice(item.variant);
       });
       return newCart;
     });
-  }, [pricingTier]);
+  }, [pricingTier, priceListVersion]);
 
   const cartTotal = useMemo(() => {
     let total = 0;
@@ -243,6 +253,8 @@ const AdminEditOrder = () => {
       setHasChanges(false);
       clearCart();
       clearClient();
+      clearPriceListVersion();
+      clearPricingTier();
       navigate('/admin/orders');
     } catch (err: any) {
       showToast(err.response?.data?.message || 'Failed to update order', 'error');
@@ -277,7 +289,7 @@ const AdminEditOrder = () => {
               <Settings2 size={18} /> Order Configuration
             </h3>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px' }}>
               <div className="input-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <label>Select Client *</label>
@@ -300,6 +312,18 @@ const AdminEditOrder = () => {
                     ))}
                   </select>
                 </div>
+              </div>
+
+              <div className="input-group">
+                <label>Price List Version *</label>
+                <select 
+                  value={priceListVersion} 
+                  onChange={e => setPriceListVersion(e.target.value as 'new' | 'old')}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-color)', borderRadius: '6px' }}
+                >
+                  <option value="new">New Price</option>
+                  <option value="old">Old Price</option>
+                </select>
               </div>
 
               <div className="input-group">
@@ -388,14 +412,14 @@ const AdminEditOrder = () => {
                         </tr>
                         {isExpanded && p.variants.map((v: any) => {
                           const qty = cart[v.variant_id]?.qty || '';
-                          const price = pricingTier === 'retailer' ? v.retailer_rate : v.distributor_rate;
+                          const price = getPrice(v);
                           
                           return (
                             <tr key={v.variant_id} style={{ background: '#fff', borderBottom: '1px solid #e2e8f0' }}>
-                              <td style={{ padding: '8px 12px', paddingLeft: '32px', color: '#64748b', fontSize: '13px' }}>
+                              <td style={{ padding: '8px 12px', paddingLeft: '48px', color: '#94a3b8', fontSize: '13px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#cbd5e1' }}></div>
-                                  {p.name}
+                                  <div style={{ width: '12px', height: '12px', borderLeft: '2px solid #cbd5e1', borderBottom: '2px solid #cbd5e1', borderRadius: '0 0 0 4px', marginTop: '-12px' }}></div>
+                                  Variant
                                 </div>
                               </td>
                               <td style={{ padding: '8px 12px', color: '#0f172a', fontWeight: 500, fontSize: '13px' }}>{v.pack_size}</td>

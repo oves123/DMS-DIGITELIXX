@@ -1,46 +1,62 @@
 import { Hono } from 'hono';
-import Models from '../db/models';
+import { drizzle } from 'drizzle-orm/d1';
+import { eq, or, inArray, desc, like } from 'drizzle-orm';
+import * as schema from '../db/schema';
 import { generateInvoicePdf } from '../services/pdfService';
+import type { Env } from '../index';
 
-const router = new Hono<{ Bindings: { MY_BUCKET: R2Bucket } }>();
-
-function getQueryId(id: string, sqlField: string) {
-    return isNaN(Number(id)) ? { _id: id } : { [sqlField]: parseInt(id) };
-}
+const router = new Hono<{ Bindings: Env }>();
 
 // GET /api/orders/admin
 router.get('/admin', async (c) => {
     try {
-        const orders = await Models.Order.find()
-            .populate('distributor_id')
-            .populate({
-                path: 'items.variant_id',
-                populate: { path: 'product_id', populate: { path: 'category_id' } }
-            })
-            .sort({ order_date: -1 })
-            .lean();
-
-        const orderIds = orders.map((o: any) => o._id);
-        const invoices = await Models.Invoice.find({ order_id: { $in: orderIds } }).lean();
+        const db = drizzle(c.env.DB, { schema });
+        const orders = await db.select().from(schema.orders).orderBy(desc(schema.orders.order_date));
         
-        const variantIds: any[] = [];
-        orders.forEach((o: any) => o.items.forEach((i: any) => variantIds.push(i.variant_id?._id)));
-        const inventory = await Models.Inventory.find({ variant_id: { $in: variantIds } }).lean();
+        const orderIds = orders.map(o => o.id);
+        
+        let orderItems: any[] = [];
+        let invoices: any[] = [];
+        if (orderIds.length > 0) {
+            for (let i = 0; i < orderIds.length; i += 90) {
+                const chunk = orderIds.slice(i, i + 90);
+                const itemsChunk = await db.select().from(schema.orderItems).where(inArray(schema.orderItems.order_id, chunk));
+                orderItems.push(...itemsChunk);
+                
+                const invChunk = await db.select().from(schema.invoices).where(inArray(schema.invoices.order_id, chunk));
+                invoices.push(...invChunk);
+            }
+        }
 
-        const invMap: any = {};
-        invoices.forEach((inv: any) => invMap[inv.order_id.toString()] = inv);
+        const users = await db.select().from(schema.users);
+        const variants = await db.select().from(schema.variants);
+        const products = await db.select().from(schema.products);
+        const categories = await db.select().from(schema.categories);
+        const inventory = await db.select().from(schema.inventory);
 
-        const stockMap: any = {};
-        inventory.forEach((inv: any) => stockMap[inv.variant_id.toString()] = inv.stock_quantity);
+        const userMap: any = {}; users.forEach(u => userMap[u.id] = u);
+        const varMap: any = {}; variants.forEach(v => varMap[v.id] = v);
+        const prodMap: any = {}; products.forEach(p => prodMap[p.id] = p);
+        const catMap: any = {}; categories.forEach(cat => catMap[cat.id] = cat);
+        const stockMap: any = {}; inventory.forEach(inv => stockMap[inv.variant_id] = inv.stock_quantity);
+        const invMap: any = {}; invoices.forEach(inv => invMap[inv.order_id] = inv);
 
-        const formattedOrders = orders.map((row: any) => {
-            const invoice = invMap[row._id.toString()] || {};
+        const itemsByOrder: any = {};
+        orderItems.forEach(item => {
+            if(!itemsByOrder[item.order_id]) itemsByOrder[item.order_id] = [];
+            itemsByOrder[item.order_id].push(item);
+        });
+
+        const formattedOrders = orders.map(row => {
+            const invoice = invMap[row.id] || {};
+            const dist = userMap[row.distributor_id] || {};
+            const items = itemsByOrder[row.id] || [];
             
             return {
-                order_id: row.sql_order_id || row._id.toString(),
-                distributor_name: row.distributor_id?.firm_name,
-                distributor_phone: row.distributor_id?.phone,
-                wallet_balance: row.distributor_id?.wallet_balance || 0,
+                order_id: row.sql_order_id || row.id,
+                distributor_name: dist.firm_name,
+                distributor_phone: dist.phone,
+                wallet_balance: dist.wallet_balance || 0,
                 status: row.status,
                 order_date: row.order_date,
                 execution_date: row.execution_date,
@@ -48,24 +64,24 @@ router.get('/admin', async (c) => {
                 credit_applied: invoice.credit_applied || 0,
                 extra_discount: invoice.extra_discount || 0,
                 final_payable: invoice.grand_total || 0,
-                items: row.items.map((item: any) => {
-                    const variant = item.variant_id || {};
-                    const product = variant.product_id || {};
-                    const category = product.category_id || {};
+                items: items.map((item: any) => {
+                    const variant = varMap[item.variant_id] || {};
+                    const product = prodMap[item.product_id] || {};
+                    const category = catMap[product.category_id] || {};
                     
                     return {
-                        order_item_id: item.sql_order_item_id || item._id.toString(),
-                        variant_id: variant.sql_variant_id || variant._id?.toString(),
+                        order_item_id: item.sql_order_item_id || item.id,
+                        variant_id: variant.sql_variant_id || variant.id,
                         product_name: product.name,
                         hsn_code: product.hsn_code,
-                        gst_percent: parseFloat(product.gst_percent) || 0,
+                        gst_percent: product.gst_percent || 0,
                         uom: variant.uom || 'Box',
                         category_name: category.name || 'Uncategorized',
                         pack_size: variant.pack_size,
                         requested_qty: item.quantity,
                         executed_qty: item.executed_qty,
                         price_at_order: item.unit_price,
-                        current_stock: stockMap[variant._id?.toString()] || 0
+                        current_stock: stockMap[variant.id] || 0
                     };
                 })
             };
@@ -82,34 +98,55 @@ router.get('/admin', async (c) => {
 router.post('/', async (c) => {
     try {
         const { distributor_id, items, apply_wallet } = await c.req.json();
-        
-        const distQuery = getQueryId(distributor_id, 'sql_user_id');
-        const user = await Models.User.findOne(distQuery);
+        const db = drizzle(c.env.DB, { schema });
+
+        const user = await db.query.users.findFirst({
+            where: or(eq(schema.users.id, distributor_id), eq(schema.users.sql_user_id, parseInt(distributor_id)))
+        });
         
         if (!user) return c.json({ message: 'Distributor not found' }, 404);
 
-        const newItems = [];
+        const orderId = crypto.randomUUID();
+        
+        const lastOrder = await db.select().from(schema.orders).orderBy(desc(schema.orders.sql_order_id)).limit(1);
+        let nextSqlOrderId = 1;
+        if (lastOrder.length > 0 && lastOrder[0].sql_order_id) {
+            nextSqlOrderId = lastOrder[0].sql_order_id + 1;
+        }
+
+        const newItems: any[] = [];
+        
         for (let item of items) {
-            const varQuery = getQueryId(item.variant_id, 'sql_variant_id');
-            const variant = await Models.Variant.findOne(varQuery);
+            const variant = await db.query.variants.findFirst({
+                where: or(eq(schema.variants.id, item.variant_id), eq(schema.variants.sql_variant_id, parseInt(item.variant_id)))
+            });
             if (variant) {
                 newItems.push({
+                    id: crypto.randomUUID(),
+                    order_id: orderId,
                     product_id: variant.product_id,
-                    variant_id: variant._id,
+                    variant_id: variant.id,
                     quantity: item.requested_qty,
                     unit_price: item.price_at_order
                 });
             }
         }
 
-        const order = await Models.Order.create({
-            distributor_id: user._id,
+        await db.insert(schema.orders).values({
+            id: orderId,
+            sql_order_id: nextSqlOrderId,
+            distributor_id: user.id,
             status: 'PENDING',
             apply_wallet: apply_wallet || false,
-            items: newItems
+            order_date: new Date(),
+            created_at: new Date()
         });
 
-        return c.json({ message: 'Order submitted successfully', order_id: order._id.toString() }, 201);
+        if (newItems.length > 0) {
+            await db.insert(schema.orderItems).values(newItems);
+        }
+
+        return c.json({ message: 'Order submitted successfully', order_id: orderId }, 201);
     } catch (err) {
         console.error(err);
         return c.json({ message: 'Failed to submit order' }, 500);
@@ -120,44 +157,68 @@ router.post('/', async (c) => {
 router.get('/distributor/:user_id', async (c) => {
     try {
         const userId = c.req.param('user_id');
-        const userQuery = getQueryId(userId, 'sql_user_id');
-        const user = await Models.User.findOne(userQuery);
+        const db = drizzle(c.env.DB, { schema });
+        
+        const user = await db.query.users.findFirst({
+            where: or(eq(schema.users.id, userId), eq(schema.users.sql_user_id, parseInt(userId)))
+        });
 
         if (!user) return c.json({ message: 'User not found' }, 404);
 
-        const orders = await Models.Order.find({ distributor_id: user._id })
-            .populate({
-                path: 'items.variant_id',
-                populate: { path: 'product_id', populate: { path: 'category_id' } }
-            })
-            .sort({ order_date: -1 })
-            .lean();
+        const orders = await db.select().from(schema.orders).where(eq(schema.orders.distributor_id, user.id)).orderBy(desc(schema.orders.order_date));
+        const orderIds = orders.map(o => o.id);
+        
+        let orderItems: any[] = [];
+        if (orderIds.length > 0) {
+            for (let i = 0; i < orderIds.length; i += 90) {
+                const chunk = orderIds.slice(i, i + 90);
+                const itemsChunk = await db.select().from(schema.orderItems).where(inArray(schema.orderItems.order_id, chunk));
+                orderItems.push(...itemsChunk);
+            }
+        }
 
-        return c.json(orders.map((row: any) => ({
-            order_id: row.sql_order_id || row._id.toString(),
-            status: row.status,
-            order_date: row.order_date,
-            execution_date: row.execution_date,
-            apply_wallet: row.apply_wallet,
-            items: row.items.map((item: any) => {
-                const variant = item.variant_id || {};
-                const product = variant.product_id || {};
-                const category = product.category_id || {};
-                return {
-                    order_item_id: item.sql_order_item_id || item._id.toString(),
-                    variant_id: variant.sql_variant_id || variant._id?.toString(),
-                    product_name: product.name,
-                    hsn_code: product.hsn_code,
-                    gst_percent: parseFloat(product.gst_percent) || 0,
-                    uom: variant.uom || 'Box',
-                    category_name: category.name || 'Uncategorized',
-                    pack_size: variant.pack_size,
-                    requested_qty: item.quantity,
-                    executed_qty: item.executed_qty,
-                    price_at_order: item.unit_price
-                };
-            })
-        })));
+        const variants = await db.select().from(schema.variants);
+        const products = await db.select().from(schema.products);
+        const categories = await db.select().from(schema.categories);
+
+        const varMap: any = {}; variants.forEach(v => varMap[v.id] = v);
+        const prodMap: any = {}; products.forEach(p => prodMap[p.id] = p);
+        const catMap: any = {}; categories.forEach(cat => catMap[cat.id] = cat);
+
+        const itemsByOrder: any = {};
+        orderItems.forEach(item => {
+            if(!itemsByOrder[item.order_id]) itemsByOrder[item.order_id] = [];
+            itemsByOrder[item.order_id].push(item);
+        });
+
+        return c.json(orders.map(row => {
+            const items = itemsByOrder[row.id] || [];
+            return {
+                order_id: row.sql_order_id || row.id,
+                status: row.status,
+                order_date: row.order_date,
+                execution_date: row.execution_date,
+                apply_wallet: row.apply_wallet,
+                items: items.map((item: any) => {
+                    const variant = varMap[item.variant_id] || {};
+                    const product = prodMap[item.product_id] || {};
+                    const category = catMap[product.category_id] || {};
+                    return {
+                        order_item_id: item.sql_order_item_id || item.id,
+                        variant_id: variant.sql_variant_id || variant.id,
+                        product_name: product.name,
+                        hsn_code: product.hsn_code,
+                        gst_percent: product.gst_percent || 0,
+                        uom: variant.uom || 'Box',
+                        category_name: category.name || 'Uncategorized',
+                        pack_size: variant.pack_size,
+                        requested_qty: item.quantity,
+                        executed_qty: item.executed_qty,
+                        price_at_order: item.unit_price
+                    };
+                })
+            };
+        }));
     } catch (err) {
         console.error(err);
         return c.json({ message: 'Server Error' }, 500);
@@ -167,14 +228,19 @@ router.get('/distributor/:user_id', async (c) => {
 // PUT /api/orders/:id/execute
 router.put('/:id/execute', async (c) => {
     try {
-        const orderId = c.req.param('id');
+        const orderIdParam = c.req.param('id');
         const { items, credit_applied = 0, extra_discount = 0, discount_reason = '' } = await c.req.json();
         
-        const orderQuery = getQueryId(orderId, 'sql_order_id');
-        const order = await Models.Order.findOne(orderQuery).populate('distributor_id');
+        const db = drizzle(c.env.DB, { schema });
+        const order = await db.query.orders.findFirst({
+            where: or(eq(schema.orders.id, orderIdParam), eq(schema.orders.sql_order_id, parseInt(orderIdParam)))
+        });
 
         if (!order) return c.json({ message: 'Order not found' }, 404);
         if (order.status === 'EXECUTED') return c.json({ message: 'Order is already executed' }, 400);
+
+        const orderItems = await db.select().from(schema.orderItems).where(eq(schema.orderItems.order_id, order.id));
+        const user = await db.query.users.findFirst({ where: eq(schema.users.id, order.distributor_id) });
 
         let subtotal = 0;
         let cgst = 0;
@@ -183,23 +249,24 @@ router.put('/:id/execute', async (c) => {
         for (let item of items) {
             if (item.executed_qty < 0) return c.json({ message: 'Executed quantity cannot be negative' }, 400);
 
-            const orderItem = order.items.find((i: any) => 
-                (i.sql_order_item_id == item.order_item_id) || (i._id.toString() == item.order_item_id)
+            const orderItem = orderItems.find((i: any) => 
+                (i.sql_order_item_id == item.order_item_id) || (i.id == item.order_item_id)
             );
 
             if (!orderItem) return c.json({ message: `Order item ID ${item.order_item_id} not found.` }, 400);
-            orderItem.executed_qty = item.executed_qty;
-
-            const variant = await Models.Variant.findById(orderItem.variant_id);
             
-            await Models.Inventory.findOneAndUpdate(
-                { variant_id: variant._id },
-                { $inc: { stock_quantity: -item.executed_qty } }
-            );
+            await db.update(schema.orderItems).set({ executed_qty: item.executed_qty }).where(eq(schema.orderItems.id, orderItem.id));
 
-            const product = await Models.Product.findById(variant.product_id);
+            const variant = await db.query.variants.findFirst({ where: eq(schema.variants.id, orderItem.variant_id) }) as any;
+            
+            const inv = await db.query.inventory.findFirst({ where: eq(schema.inventory.variant_id, variant.id) });
+            if (inv) {
+                await db.update(schema.inventory).set({ stock_quantity: (inv.stock_quantity || 0) - item.executed_qty }).where(eq(schema.inventory.id, inv.id));
+            }
+
+            const product = await db.query.products.findFirst({ where: eq(schema.products.id, variant.product_id) }) as any;
             const price = orderItem.unit_price;
-            const gstPct = parseFloat(product.gst_percent) || 0;
+            const gstPct = product.gst_percent || 0;
             
             const itemSubtotal = price * item.executed_qty;
             subtotal += itemSubtotal;
@@ -209,9 +276,7 @@ router.put('/:id/execute', async (c) => {
             sgst += itemSubtotal * (halfGst / 100);
         }
 
-        order.status = 'EXECUTED';
-        order.execution_date = new Date();
-        await order.save();
+        await db.update(schema.orders).set({ status: 'EXECUTED', execution_date: new Date() }).where(eq(schema.orders.id, order.id));
 
         let grand_total = subtotal + cgst + sgst;
         grand_total = grand_total - credit_applied - extra_discount;
@@ -226,19 +291,24 @@ router.put('/:id/execute', async (c) => {
         const fyString = `${startYear.toString().slice(-2)}${endYear.toString().slice(-2)}`;
         const invoicePrefix = `SS032-${fyString}-`;
 
-        const lastInvoice = await Models.Invoice.findOne({ invoice_number: new RegExp(`^${invoicePrefix}`) })
-            .sort({ invoice_number: -1 });
-
+        // Wait, D1 SQLite doesn't have regex like Mongo. We use LIKE.
+        const lastInvoices = await db.select().from(schema.invoices)
+            .where(like(schema.invoices.invoice_number, `${invoicePrefix}%`));
+            
         let nextSeq = (fyString === '2627') ? 170 : 1;
-        if (lastInvoice) {
-            const parts = lastInvoice.invoice_number.split('-');
+        if (lastInvoices.length > 0) {
+            // Sort to find max
+            lastInvoices.sort((a, b) => b.invoice_number.localeCompare(a.invoice_number));
+            const parts = lastInvoices[0].invoice_number.split('-');
             nextSeq = parseInt(parts[parts.length - 1], 10) + 1;
         }
 
         const invoice_number = `${invoicePrefix}${String(nextSeq).padStart(4, '0')}`;
+        const invoiceId = crypto.randomUUID();
 
-        const invoice = await Models.Invoice.create({
-            order_id: order._id,
+        await db.insert(schema.invoices).values({
+            id: invoiceId,
+            order_id: order.id,
             invoice_number,
             subtotal,
             cgst_amount: cgst,
@@ -247,39 +317,38 @@ router.put('/:id/execute', async (c) => {
             credit_applied,
             extra_discount,
             discount_reason,
-            payment_status: 'UNPAID'
+            payment_status: 'UNPAID',
+            created_at: new Date()
         });
 
-        if (credit_applied > 0) {
-            await Models.User.findByIdAndUpdate(
-                order.distributor_id,
-                { $inc: { wallet_balance: -credit_applied } }
-            );
+        if (credit_applied > 0 && user) {
+            await db.update(schema.users).set({ wallet_balance: (user.wallet_balance || 0) - credit_applied }).where(eq(schema.users.id, user.id));
         }
 
         c.executionCtx.waitUntil(
             (async () => {
               try {
+                const invoice = await db.query.invoices.findFirst({ where: eq(schema.invoices.id, invoiceId) });
                 const invoiceData = {
-                  invoice: { ...invoice.toObject(), firm_name: (order.distributor_id as any).firm_name, address: (order.distributor_id as any).address, owner_name: (order.distributor_id as any).owner_name },
-                  items: items.filter((i: any) => i.executed_qty > 0) // note: items structure may need fixing to match generateInvoicePdf
+                  invoice: { ...invoice, firm_name: user?.firm_name, address: user?.address, owner_name: user?.owner_name },
+                  items: [] as any[]
                 };
-                // Quick fix to match generateInvoicePdf expected items
-                const fullItems = [];
-                for (const it of invoiceData.items) {
-                     const oi = order.items.find((x: any) => (x.sql_order_item_id == it.order_item_id) || (x._id.toString() == it.order_item_id));
-                     const variant = await Models.Variant.findById(oi.variant_id).populate('product_id');
-                     fullItems.push({
-                        product_name: (variant.product_id as any).name,
+                
+                for (const it of items) {
+                     if (it.executed_qty <= 0) continue;
+                     const oi = orderItems.find((x: any) => (x.sql_order_item_id == it.order_item_id) || (x.id == it.order_item_id));
+                     if (!oi) continue;
+                     const variant = await db.query.variants.findFirst({ where: eq(schema.variants.id, oi.variant_id) }) as any;
+                     const prod = await db.query.products.findFirst({ where: eq(schema.products.id, variant.product_id) }) as any;
+                     invoiceData.items.push({
+                        product_name: prod.name,
                         executed_qty: it.executed_qty,
                         price_at_order: oi.unit_price
                      });
                 }
-                invoiceData.items = fullItems;
-                const settings = await Models.CompanySettings.findOne() || {};
+                const settings = await db.query.companySettings.findFirst() || {};
                 const pdfUrl = await generateInvoicePdf(invoiceData, settings, c.env.MY_BUCKET as any);
-                invoice.pdf_url = pdfUrl;
-                await invoice.save();
+                await db.update(schema.invoices).set({ pdf_url: pdfUrl }).where(eq(schema.invoices.id, invoiceId));
               } catch (pdfError) {
                 console.error('Failed to generate PDF:', pdfError);
               }
@@ -296,68 +365,82 @@ router.put('/:id/execute', async (c) => {
 // PUT /api/orders/:id
 router.put('/:id', async (c) => {
     try {
-        const orderId = c.req.param('id');
+        const orderIdParam = c.req.param('id');
         const { items } = await c.req.json();
+        const db = drizzle(c.env.DB, { schema });
         
-        const orderQuery = getQueryId(orderId, 'sql_order_id');
-        const order = await Models.Order.findOne(orderQuery);
+        const order = await db.query.orders.findFirst({
+            where: or(eq(schema.orders.id, orderIdParam), eq(schema.orders.sql_order_id, parseInt(orderIdParam)))
+        });
 
         if (!order) return c.json({ message: 'Order not found' }, 404);
         if (order.status !== 'PENDING') return c.json({ message: 'Only PENDING orders can be edited' }, 400);
 
-        const newItems = [];
+        // Delete existing items
+        await db.delete(schema.orderItems).where(eq(schema.orderItems.order_id, order.id));
+
+        const newItems: any[] = [];
         for (let item of items) {
-            const varQuery = getQueryId(item.variant_id, 'sql_variant_id');
-            const variant = await Models.Variant.findOne(varQuery);
+            const variant = await db.query.variants.findFirst({
+                where: or(eq(schema.variants.id, item.variant_id), eq(schema.variants.sql_variant_id, parseInt(item.variant_id)))
+            });
             if(variant) {
                 newItems.push({
+                    id: crypto.randomUUID(),
+                    order_id: order.id,
                     product_id: variant.product_id,
-                    variant_id: variant._id,
+                    variant_id: variant.id,
                     quantity: item.requested_qty,
                     unit_price: item.price_at_order
                 });
             }
         }
 
-        order.items = newItems;
-        await order.save();
+        if (newItems.length > 0) {
+            await db.insert(schema.orderItems).values(newItems);
+        }
 
-        return c.json({ message: 'Order updated successfully', order_id: order._id.toString() });
+        return c.json({ message: 'Order updated successfully', order_id: order.id });
     } catch (err) {
         console.error(err);
         return c.json({ message: 'Failed to update order' }, 500);
     }
 });
 
-// POST /api/orders/:id/draft-pdf
 router.post('/:id/draft-pdf', async (c) => {
     try {
-        const orderId = c.req.param('id');
+        const orderIdParam = c.req.param('id');
         const { items, credit_applied = 0, extra_discount = 0 } = await c.req.json();
+        const db = drizzle(c.env.DB, { schema });
         
-        const orderQuery = getQueryId(orderId, 'sql_order_id');
-        const order = await Models.Order.findOne(orderQuery).populate('distributor_id');
+        const order = await db.query.orders.findFirst({
+            where: or(eq(schema.orders.id, orderIdParam), eq(schema.orders.sql_order_id, parseInt(orderIdParam)))
+        });
             
         if (!order) return c.json({ message: 'Order not found' }, 404);
         
-        const settings = await Models.CompanySettings.findOne() || {};
+        const user = await db.query.users.findFirst({ where: eq(schema.users.id, order.distributor_id) });
+        const settings = await db.query.companySettings.findFirst() || {};
 
         let subtotal = 0;
         let cgst = 0;
         let sgst = 0;
         const invoiceItems = [];
 
+        const orderItems = await db.select().from(schema.orderItems).where(eq(schema.orderItems.order_id, order.id));
+
         for (let item of items) {
-            const orderItem = order.items.find((i: any) => 
-                (i.sql_order_item_id == item.order_item_id) || (i._id.toString() == item.order_item_id)
+            const orderItem = orderItems.find((i: any) => 
+                (i.sql_order_item_id == item.order_item_id) || (i.id == item.order_item_id)
             );
             
             if (orderItem) {
-                const variant = await Models.Variant.findById(orderItem.variant_id).populate({ path: 'product_id', populate: { path: 'category_id' } }) as any;
-                const product = variant.product_id;
+                const variant = await db.query.variants.findFirst({ where: eq(schema.variants.id, orderItem.variant_id) }) as any;
+                const product = await db.query.products.findFirst({ where: eq(schema.products.id, variant.product_id) }) as any;
+                const category = await db.query.categories.findFirst({ where: eq(schema.categories.id, product.category_id) }) as any;
                 
                 const price = orderItem.unit_price;
-                const gstPct = parseFloat(product.gst_percent) || 0;
+                const gstPct = product.gst_percent || 0;
                 
                 const itemSubtotal = price * item.executed_qty;
                 subtotal += itemSubtotal;
@@ -367,7 +450,7 @@ router.post('/:id/draft-pdf', async (c) => {
                 sgst += itemSubtotal * (halfGst / 100);
                 
                 invoiceItems.push({
-                    category_name: product.category_id?.name,
+                    category_name: category?.name,
                     executed_qty: item.executed_qty,
                     price_at_order: price,
                     hsn_code: product.hsn_code,
@@ -385,11 +468,11 @@ router.post('/:id/draft-pdf', async (c) => {
         grand_total = Math.round(grand_total);
         
         const invoice = {
-            firm_name: (order.distributor_id as any).firm_name,
-            owner_name: (order.distributor_id as any).owner_name,
-            address: (order.distributor_id as any).address,
-            fssai_number: (order.distributor_id as any).fssai_number,
-            invoice_number: `DRAFT-${orderId}`,
+            firm_name: user?.firm_name,
+            owner_name: user?.owner_name,
+            address: user?.address,
+            fssai_number: null,
+            invoice_number: `DRAFT-${order.id}`,
             created_at: new Date(),
             subtotal,
             cgst_amount: cgst,
@@ -406,8 +489,8 @@ router.post('/:id/draft-pdf', async (c) => {
         }
 
         c.header('Content-Type', 'application/pdf');
-        c.header('Content-Disposition', `attachment; filename="Draft_Bill_${orderId}.pdf"`);
-        return c.body(file.body);
+        c.header('Content-Disposition', `attachment; filename="Draft_Bill_${order.id}.pdf"`);
+        return c.body(file.body as any);
         
     } catch (err: any) {
         console.error(err);

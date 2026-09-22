@@ -226,6 +226,7 @@ exports.createOrder = async (req, res) => {
             distributor_id: user._id,
             status: 'PENDING',
             apply_wallet: apply_wallet || false,
+            order_date: new Date(),
             items: newItems
         });
 

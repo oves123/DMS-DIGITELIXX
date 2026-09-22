@@ -284,6 +284,20 @@ const AdminOrders = () => {
                   <div>
                     <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       Order #{order.order_id}
+                      {order.status === 'PENDING' && (new Date().getTime() - new Date(order.order_date).getTime()) < 24 * 60 * 60 * 1000 && (
+                        <span style={{
+                          background: '#ef4444',
+                          color: 'white',
+                          fontSize: '10px',
+                          padding: '2px 6px',
+                          borderRadius: '10px',
+                          marginLeft: '4px',
+                          fontWeight: 'bold',
+                          animation: 'pulse 2s infinite'
+                        }}>
+                          NEW
+                        </span>
+                      )}
                       <button 
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', padding: 0, display: 'flex', alignItems: 'center' }}
                         onClick={(e) => {
@@ -324,6 +338,7 @@ const AdminOrders = () => {
                       <th>GST (%)</th>
                       {executingOrderId === order.order_id && <th>Execute Qty</th>}
                       {order.status === 'EXECUTED' && <th>Executed Qty</th>}
+                      <th style={{ textAlign: 'right' }}>Total (₹)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -364,6 +379,21 @@ const AdminOrders = () => {
                           {order.status === 'EXECUTED' && (
                             <td style={{ fontWeight: 'bold', color: '#059669' }}>{item.executed_qty}</td>
                           )}
+
+                          <td style={{ textAlign: 'right', fontWeight: 500 }}>
+                            {(() => {
+                                let q = 0;
+                                if (order.status === 'EXECUTED') q = item.executed_qty || 0;
+                                else if (executingOrderId === order.order_id) {
+                                  q = executionQuantities[item.order_item_id] !== undefined ? executionQuantities[item.order_item_id] : Math.min(item.requested_qty, maxQty);
+                                } else {
+                                  q = item.requested_qty || 0;
+                                }
+                                const sub = q * item.price_at_order;
+                                const total = sub + (sub * (item.gst_percent || 0) / 100);
+                                return `₹${Math.round(total)}`;
+                            })()}
+                          </td>
                         </tr>
                       );
                     })}
@@ -376,16 +406,15 @@ const AdminOrders = () => {
                       <td style={{ fontWeight: 'bold', color: order.status === 'PENDING' && executingOrderId !== order.order_id ? '#0f172a' : '#9ca3af', padding: '12px' }}>
                         {order.status === 'PENDING' && executingOrderId !== order.order_id ? totalBoxes : '-'}
                       </td>
-                      <td></td>
-                      <td></td>
-                      <td style={{ fontWeight: 'bold', color: '#10b981', fontSize: '15px', padding: '12px' }}>
-                        ₹{Math.round(totalAmount)}
-                      </td>
+                      <td colSpan={3}></td>
                       {(executingOrderId === order.order_id || order.status === 'EXECUTED') && (
                         <td style={{ fontWeight: 'bold', color: '#0f172a', padding: '12px' }}>
                           {totalBoxes}
                         </td>
                       )}
+                      <td style={{ textAlign: 'right', fontWeight: 'bold', color: '#10b981', fontSize: '15px', padding: '12px' }}>
+                        ₹{Math.round(totalAmount)}
+                      </td>
                     </tr>
                   </tfoot>
                 </table>

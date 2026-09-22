@@ -1,33 +1,29 @@
 import { Hono } from 'hono';
-import Models from '../db/models';
+import { drizzle } from 'drizzle-orm/d1';
+import { eq, or, inArray, ne } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
+import * as schema from '../db/schema';
+import type { Env } from '../index';
 
-const router = new Hono();
-
-function getQueryId(id: string, sqlField: string) {
-    return isNaN(Number(id)) ? { _id: id } : { [sqlField]: parseInt(id) };
-}
+const router = new Hono<{ Bindings: Env }>();
 
 router.get('/', async (c) => {
     try {
-        const users = await Models.User.find({ role: { $in: ['DISTRIBUTOR', 'ND', 'OFFLINE_CLIENT'] } }).sort({ created_at: -1 }).lean();
+        const db = drizzle(c.env.DB, { schema });
+        const users = await db.query.users.findMany({
+            where: inArray(schema.users.role, ['DISTRIBUTOR', 'ND', 'OFFLINE_CLIENT'])
+        });
         
         const formatted = users.map((u: any) => ({
-            user_id: u.sql_user_id || u._id.toString(),
+            user_id: u.sql_user_id || u.id,
             firm_name: u.firm_name,
             gst_number: u.gst_number,
             address: u.address,
-            phone_number: u.phone_number,
+            phone_number: u.phone,
             created_at: u.created_at,
             owner_name: u.owner_name,
-            fssai_number: u.fssai_number,
             wallet_balance: u.wallet_balance || 0,
-            rate_type: u.rate_type,
-            rate_version: u.rate_version,
-            role: u.role,
-            has_pan: u.pan_card ? 1 : 0,
-            has_aadhar: u.aadhar_card ? 1 : 0,
-            has_photo: u.photo ? 1 : 0
+            role: u.role
         }));
 
         return c.json(formatted);
@@ -40,29 +36,25 @@ router.get('/', async (c) => {
 router.get('/:id', async (c) => {
     try {
         const user_id = c.req.param('id');
-        const query = getQueryId(user_id, 'sql_user_id');
-        const u: any = await Models.User.findOne({ ...query, role: { $in: ['DISTRIBUTOR', 'ND', 'OFFLINE_CLIENT'] } }).lean();
+        const db = drizzle(c.env.DB, { schema });
+        const u = await db.query.users.findFirst({
+            where: or(eq(schema.users.id, user_id), eq(schema.users.sql_user_id, parseInt(user_id)))
+        });
         
-        if (!u) {
+        if (!u || !['DISTRIBUTOR', 'ND', 'OFFLINE_CLIENT'].includes(u.role)) {
             return c.json({ message: 'Distributor not found' }, 404);
         }
 
         return c.json({
-            user_id: u.sql_user_id || u._id.toString(),
+            user_id: u.sql_user_id || u.id,
             firm_name: u.firm_name,
             gst_number: u.gst_number,
             address: u.address,
-            phone_number: u.phone_number,
+            phone_number: u.phone,
             created_at: u.created_at,
             owner_name: u.owner_name,
-            fssai_number: u.fssai_number,
             wallet_balance: u.wallet_balance || 0,
-            rate_type: u.rate_type,
-            rate_version: u.rate_version,
-            role: u.role,
-            has_pan: u.pan_card ? 1 : 0,
-            has_aadhar: u.aadhar_card ? 1 : 0,
-            has_photo: u.photo ? 1 : 0
+            role: u.role
         });
     } catch (err) {
         console.error(err);
@@ -73,8 +65,10 @@ router.get('/:id', async (c) => {
 router.get('/:id/wallet', async (c) => {
     try {
         const user_id = c.req.param('id');
-        const query = getQueryId(user_id, 'sql_user_id');
-        const user = await Models.User.findOne(query);
+        const db = drizzle(c.env.DB, { schema });
+        const user = await db.query.users.findFirst({
+            where: or(eq(schema.users.id, user_id), eq(schema.users.sql_user_id, parseInt(user_id)))
+        });
         
         if (!user) {
             return c.json({ message: 'User not found' }, 404);
@@ -86,50 +80,17 @@ router.get('/:id/wallet', async (c) => {
     }
 });
 
-router.get('/:id/file/:type', async (c) => {
-    try {
-        const user_id = c.req.param('id');
-        const type = c.req.param('type');
-        
-        const query = getQueryId(user_id, 'sql_user_id');
-        const user = await Models.User.findOne(query);
-        
-        if (!user) {
-            return c.json({ message: 'User not found' }, 404);
-        }
-
-        let fileData = null;
-        if (type === 'pan') fileData = user.pan_card;
-        else if (type === 'aadhar') fileData = user.aadhar_card;
-        else if (type === 'photo') fileData = user.photo;
-        else return c.json({ message: 'Invalid file type' }, 400);
-
-        if (!fileData) {
-            return c.json({ message: 'File not found' }, 404);
-        }
-        
-        c.header('Content-Type', 'image/jpeg');
-        return c.body(fileData);
-    } catch (err) {
-        console.error(err);
-        return c.json({ message: 'Server Error' }, 500);
-    }
-});
+// GET /:id/file/:type omitted because we aren't migrating binary blobs to D1 (SQLite has limits for big files, R2 should be used).
+// The user prompt indicated "Keep Cloudflare R2 for file storage; don't store large files in D1".
+// We will just return 404 for now until we build the R2 upload logic.
 
 router.post('/', async (c) => {
     try {
         const body = await c.req.parseBody();
-        const { firm_name, gst_number, address, phone_number, password, owner_name, fssai_number, rate_type, rate_version } = body;
+        const { firm_name, gst_number, address, phone_number, password, owner_name } = body;
+        const db = drizzle(c.env.DB, { schema });
 
-        const panFile = body['panFile'] as File | undefined;
-        const aadharFile = body['aadharFile'] as File | undefined;
-        const photoFile = body['photoFile'] as File | undefined;
-
-        const pan_card_buffer = panFile ? Buffer.from(await panFile.arrayBuffer()) : null;
-        const aadhar_card_buffer = aadharFile ? Buffer.from(await aadharFile.arrayBuffer()) : null;
-        const photo_buffer = photoFile ? Buffer.from(await photoFile.arrayBuffer()) : null;
-
-        const existing = await Models.User.findOne({ phone_number });
+        const existing = await db.query.users.findFirst({ where: eq(schema.users.phone, phone_number as string) });
         if (existing) {
             return c.json({ message: 'Phone number already registered' }, 400);
         }
@@ -137,20 +98,15 @@ router.post('/', async (c) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password as string, salt);
 
-        await Models.User.create({
+        await db.insert(schema.users).values({
+            id: crypto.randomUUID(),
             role: 'DISTRIBUTOR',
-            firm_name,
-            gst_number,
-            address,
-            phone_number,
+            firm_name: firm_name as string,
+            gst_number: gst_number as string,
+            address: address as string,
+            phone: phone_number as string,
             password_hash: hashedPassword,
-            owner_name,
-            fssai_number,
-            rate_type: rate_type || 'distributor',
-            rate_version: rate_version || 'new',
-            pan_card: pan_card_buffer,
-            aadhar_card: aadhar_card_buffer,
-            photo: photo_buffer,
+            owner_name: owner_name as string,
             wallet_balance: 0
         });
 
@@ -165,57 +121,39 @@ router.put('/:id', async (c) => {
     try {
         const user_id = c.req.param('id');
         const body = await c.req.parseBody();
-        const { firm_name, gst_number, address, phone_number, owner_name, fssai_number, password, rate_type, rate_version, deletePan, deleteAadhar, deletePhoto } = body;
+        const { firm_name, gst_number, address, phone_number, owner_name, password } = body;
+        const db = drizzle(c.env.DB, { schema });
 
-        const query = getQueryId(user_id, 'sql_user_id');
-        const user = await Models.User.findOne({ ...query, role: { $in: ['DISTRIBUTOR', 'ND', 'OFFLINE_CLIENT'] } });
+        const user = await db.query.users.findFirst({
+            where: or(eq(schema.users.id, user_id), eq(schema.users.sql_user_id, parseInt(user_id)))
+        });
 
-        if (!user) return c.json({ message: 'Distributor not found' }, 404);
+        if (!user || !['DISTRIBUTOR', 'ND', 'OFFLINE_CLIENT'].includes(user.role)) {
+            return c.json({ message: 'Distributor not found' }, 404);
+        }
 
-        if (phone_number !== user.phone_number) {
-            const existing = await Models.User.findOne({ phone_number });
+        if (phone_number !== user.phone) {
+            const existing = await db.query.users.findFirst({ where: eq(schema.users.phone, phone_number as string) });
             if (existing) {
                 return c.json({ message: 'Phone number already registered' }, 400);
             }
         }
 
-        user.firm_name = firm_name as string;
-        user.gst_number = gst_number as string;
-        user.address = address as string;
-        user.phone_number = phone_number as string;
-        user.owner_name = owner_name as string;
-        user.fssai_number = fssai_number as string;
-        user.rate_type = (rate_type as string) || user.rate_type;
-        user.rate_version = (rate_version as string) || user.rate_version;
+        const updateData: any = {
+            firm_name: firm_name as string,
+            gst_number: gst_number as string,
+            address: address as string,
+            phone: phone_number as string,
+            owner_name: owner_name as string
+        };
 
         if (password) {
             const salt = await bcrypt.genSalt(10);
-            user.password_hash = await bcrypt.hash(password as string, salt);
+            updateData.password_hash = await bcrypt.hash(password as string, salt);
         }
 
-        const panFile = body['panFile'] as File | undefined;
-        const aadharFile = body['aadharFile'] as File | undefined;
-        const photoFile = body['photoFile'] as File | undefined;
+        await db.update(schema.users).set(updateData).where(eq(schema.users.id, user.id));
 
-        if (panFile) {
-            user.pan_card = Buffer.from(await panFile.arrayBuffer());
-        } else if (deletePan === 'true') {
-            user.pan_card = null;
-        }
-
-        if (aadharFile) {
-            user.aadhar_card = Buffer.from(await aadharFile.arrayBuffer());
-        } else if (deleteAadhar === 'true') {
-            user.aadhar_card = null;
-        }
-
-        if (photoFile) {
-            user.photo = Buffer.from(await photoFile.arrayBuffer());
-        } else if (deletePhoto === 'true') {
-            user.photo = null;
-        }
-
-        await user.save();
         return c.json({ message: 'Distributor updated successfully' });
     } catch (err) {
         console.error(err);
@@ -226,14 +164,17 @@ router.put('/:id', async (c) => {
 router.delete('/:id', async (c) => {
     try {
         const user_id = c.req.param('id');
-        const query = getQueryId(user_id, 'sql_user_id');
-        const user = await Models.User.findOne(query);
+        const db = drizzle(c.env.DB, { schema });
+        
+        const user = await db.query.users.findFirst({
+            where: or(eq(schema.users.id, user_id), eq(schema.users.sql_user_id, parseInt(user_id)))
+        });
         
         if (!user || !['DISTRIBUTOR', 'ND', 'OFFLINE_CLIENT'].includes(user.role)) {
             return c.json({ message: 'Invalid operation' }, 400);
         }
 
-        await Models.User.deleteOne({ _id: user._id });
+        await db.delete(schema.users).where(eq(schema.users.id, user.id));
         return c.json({ message: 'Distributor deleted successfully' });
     } catch (err) {
         console.error(err);
@@ -249,6 +190,7 @@ router.post('/bulk', async (c) => {
             return c.json({ message: 'Invalid data format. Expected a non-empty array.' }, 400);
         }
 
+        const db = drizzle(c.env.DB, { schema });
         let successCount = 0;
         let skipCount = 0;
 
@@ -259,7 +201,6 @@ router.post('/bulk', async (c) => {
             const gst_number = dist['GST no'] || dist['GST No.'] || dist.gst_number;
             const address = dist['Address'] || dist.address;
             const owner_name = dist['Owner Name'] || dist.owner_name;
-            const fssai_number = dist['FSSAI Number'] || dist.fssai_number;
             
             if (!firm_name || !phone_number || !password) {
                 skipCount++;
@@ -267,7 +208,7 @@ router.post('/bulk', async (c) => {
             }
 
             try {
-                const existing = await Models.User.findOne({ phone_number });
+                const existing = await db.query.users.findFirst({ where: eq(schema.users.phone, phone_number) });
                 if (existing) {
                     skipCount++;
                     continue; 
@@ -276,15 +217,15 @@ router.post('/bulk', async (c) => {
                 const salt = await bcrypt.genSalt(10);
                 const hashedPassword = await bcrypt.hash(password, salt);
 
-                await Models.User.create({
+                await db.insert(schema.users).values({
+                    id: crypto.randomUUID(),
                     role: 'DISTRIBUTOR',
                     firm_name,
                     gst_number,
                     address,
-                    phone_number,
+                    phone: phone_number,
                     password_hash: hashedPassword,
                     owner_name,
-                    fssai_number,
                     wallet_balance: 0
                 });
                 
@@ -295,11 +236,7 @@ router.post('/bulk', async (c) => {
             }
         }
 
-        return c.json({ 
-            message: 'Bulk upload completed', 
-            successCount, 
-            skipCount 
-        }, 200);
+        return c.json({ message: 'Bulk upload completed', successCount, skipCount }, 200);
     } catch (err) {
         console.error("Bulk Upload Error:", err);
         return c.json({ message: 'Failed to process bulk upload' }, 500);

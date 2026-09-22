@@ -333,7 +333,24 @@ const AdminClaims = () => {
                             {expandedRowId === cn.credit_note_id ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
                           </button>
                         </td>
-                        <td style={{ padding: '16px' }}><span style={{ fontWeight: '500', color: '#111827' }}>{cn.credit_note_number}</span></td>
+                        <td style={{ padding: '16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontWeight: '500', color: '#111827' }}>{cn.credit_note_number}</span>
+                            {cn.created_at && (new Date().getTime() - new Date(cn.created_at).getTime()) < 24 * 60 * 60 * 1000 && (
+                              <span style={{
+                                background: '#ef4444',
+                                color: 'white',
+                                fontSize: '10px',
+                                padding: '2px 6px',
+                                borderRadius: '10px',
+                                fontWeight: 'bold',
+                                animation: 'pulse 2s infinite'
+                              }}>
+                                NEW
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td style={{ padding: '16px' }}><span style={{ color: '#4b5563' }}>{cn.distributor_name}</span></td>
                         <td style={{ padding: '16px' }}><span style={{ color: '#4b5563' }}>{cn.invoice_number || '-'}</span></td>
                         <td style={{ padding: '16px' }}><span style={{ color: '#4b5563' }}>{new Date(cn.created_at).toLocaleDateString()}</span></td>

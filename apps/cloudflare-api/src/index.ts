@@ -1,7 +1,6 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { R2Bucket } from '@cloudflare/workers-types'
-import { connectDB } from './db/mongo'
+import { R2Bucket, D1Database } from '@cloudflare/workers-types'
 import auth from './routes/auth'
 import products from './routes/products'
 import orders from './routes/orders'
@@ -10,7 +9,7 @@ import reports from './routes/reports'
 
 export type Env = {
   MY_BUCKET: R2Bucket;
-  MONGO_URI: string;
+  DB: D1Database;
   JWT_SECRET: string;
 }
 
@@ -18,12 +17,9 @@ const app = new Hono<{ Bindings: Env }>()
 
 app.use('*', cors())
 
-// Connect to MongoDB before processing any route
-app.use('*', async (c, next) => {
-  if (c.env.MONGO_URI) {
-    await connectDB(c.env.MONGO_URI);
-  }
-  await next();
+app.onError((err, c) => {
+  console.error("Global Error:", err);
+  return c.json({ error: err.message, stack: err.stack }, 500);
 })
 
 import dashboard from './routes/dashboard'
@@ -44,7 +40,7 @@ app.route('/api/settings', settings)
 app.route('/api/ledger', ledger)
 
 app.get('/', (c) => {
-  return c.text('Cloudflare Worker API Running with MongoDB')
+  return c.text('Cloudflare Worker API Running with D1')
 })
 
 export default app

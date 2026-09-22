@@ -154,6 +154,8 @@ exports.addProduct = async (req, res) => {
                 pieces_per_box: v.pieces_per_box || parsePiecesFromPackSize(v.pack_size),
                 distributor_rate: v.distributor_rate,
                 retailer_rate: v.retailer_rate,
+                old_distributor_rate: v.old_distributor_rate,
+                old_retailer_rate: v.old_retailer_rate,
                 mrp: v.mrp
             }));
             await Models.Variant.insertMany(variantDocs);
@@ -171,7 +173,7 @@ exports.addProduct = async (req, res) => {
 exports.updateProductVariant = async (req, res) => {
     try {
         const variant_id = req.params.variant_id;
-        const { name, category_name, hsn_code, uom, pack_size, pieces_per_box, distributor_rate, retailer_rate, gst_percent, mrp } = req.body;
+        const { name, category_name, hsn_code, uom, pack_size, pieces_per_box, distributor_rate, retailer_rate, old_distributor_rate, old_retailer_rate, gst_percent, mrp } = req.body;
 
         let category = await Models.Category.findOne({ name: category_name });
         if (!category) {
@@ -208,6 +210,8 @@ exports.updateProductVariant = async (req, res) => {
             pieces_per_box: pieces_per_box || parsePiecesFromPackSize(pack_size),
             distributor_rate,
             retailer_rate,
+            old_distributor_rate,
+            old_retailer_rate,
             mrp: mrp || 0
         });
 
@@ -324,7 +328,7 @@ exports.bulkUploadProducts = async (req, res) => {
 exports.addProductVariant = async (req, res) => {
     try {
         const { product_id } = req.params;
-        const { pack_size, pieces_per_box, distributor_rate, retailer_rate, mrp } = req.body;
+        const { pack_size, pieces_per_box, distributor_rate, retailer_rate, old_distributor_rate, old_retailer_rate, mrp } = req.body;
 
         const pQuery = isNaN(product_id) ? { _id: product_id } : { sql_product_id: product_id };
         const prod = await Models.Product.findOne(pQuery);
@@ -341,6 +345,8 @@ exports.addProductVariant = async (req, res) => {
             pieces_per_box: pieces_per_box || parsePiecesFromPackSize(pack_size),
             distributor_rate: distributor_rate || 0,
             retailer_rate: retailer_rate || 0,
+            old_distributor_rate: old_distributor_rate || null,
+            old_retailer_rate: old_retailer_rate || null,
             mrp: mrp || 0
         });
 

@@ -74,52 +74,63 @@ const AdminLayout = () => {
               key={item.path}
               to={item.path}
               className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
-              style={{ display: 'flex', alignItems: 'center', gap: '10px' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}
               onClick={() => setIsSidebarOpen(false)}
             >
               {item.icon}
-              <span className="nav-label" style={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
+              <span className="nav-label" style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                 {item.name}
-                {item.name === 'Orders' && pendingOrders > 0 && (
-                  <span style={{
-                    background: '#ef4444',
-                    color: 'white',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    padding: '2px 8px',
-                    borderRadius: '12px',
-                    marginLeft: '8px'
-                  }}>
-                    {pendingOrders}
-                  </span>
-                )}
-                {item.name === 'Inventory' && lowStockCount > 0 && (
-                  <span style={{
-                    background: '#ef4444',
-                    color: 'white',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    padding: '2px 8px',
-                    borderRadius: '12px',
-                    marginLeft: '8px'
-                  }}>
-                    {lowStockCount}
-                  </span>
-                )}
-                {item.name === 'Claims & Credits' && pendingClaims > 0 && (
-                  <span style={{
-                    background: '#ef4444',
-                    color: 'white',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    padding: '2px 8px',
-                    borderRadius: '12px',
-                    marginLeft: '8px'
-                  }}>
-                    {pendingClaims}
-                  </span>
-                )}
               </span>
+              
+              {/* Badges moved outside nav-label so they can be shown/styled when collapsed */}
+              {item.name === 'Orders' && pendingOrders > 0 && (
+                <span className="sidebar-badge" style={{
+                  background: '#ef4444',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  marginLeft: isCollapsed ? '0' : 'auto',
+                  position: isCollapsed ? 'absolute' : 'static',
+                  top: isCollapsed ? '8px' : 'auto',
+                  right: isCollapsed ? '8px' : 'auto',
+                }}>
+                  {pendingOrders}
+                </span>
+              )}
+              {item.name === 'Inventory' && lowStockCount > 0 && (
+                <span className="sidebar-badge" style={{
+                  background: '#ef4444',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  marginLeft: isCollapsed ? '0' : 'auto',
+                  position: isCollapsed ? 'absolute' : 'static',
+                  top: isCollapsed ? '8px' : 'auto',
+                  right: isCollapsed ? '8px' : 'auto',
+                }}>
+                  {lowStockCount > 99 ? '99+' : lowStockCount}
+                </span>
+              )}
+              {item.name === 'Claims & Credits' && pendingClaims > 0 && (
+                <span className="sidebar-badge" style={{
+                  background: '#ef4444',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  marginLeft: isCollapsed ? '0' : 'auto',
+                  position: isCollapsed ? 'absolute' : 'static',
+                  top: isCollapsed ? '8px' : 'auto',
+                  right: isCollapsed ? '8px' : 'auto',
+                }}>
+                  {pendingClaims}
+                </span>
+              )}
             </Link>
           ))}
         </nav>

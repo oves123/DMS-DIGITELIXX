@@ -18,6 +18,7 @@ const AdminProducts = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedHsn, setSelectedHsn] = useState('All');
+  const [rateView, setRateView] = useState<'new' | 'old'>('new');
   const [minRate, setMinRate] = useState('');
   const [maxRate, setMaxRate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -29,7 +30,7 @@ const AdminProducts = () => {
   const [isUpdating, setIsUpdating] = useState(false);
 
   const [addingVariantTo, setAddingVariantTo] = useState<any>(null);
-  const [newVariantForm, setNewVariantForm] = useState({ pack_size: '', pieces_per_box: '', distributor_rate: '', retailer_rate: '', mrp: '' });
+  const [newVariantForm, setNewVariantForm] = useState({ pack_size: '', pieces_per_box: '', distributor_rate: '', retailer_rate: '', old_distributor_rate: '', old_retailer_rate: '', mrp: '', rate_type: 'new' });
   const [isAddingVariant, setIsAddingVariant] = useState(false);
 
   useEffect(() => {
@@ -113,14 +114,23 @@ const AdminProducts = () => {
   };
 
   const openEditModal = (variant: any) => {
+    let initialRateType = 'new';
+    if (variant.old_distributor_rate && variant.distributor_rate === 0) initialRateType = 'old';
+    else if (variant.old_distributor_rate && variant.distributor_rate) initialRateType = 'both';
+
     setEditingVariant(variant);
-    setEditForm({ ...variant });
+    setEditForm({ ...variant, rate_type: initialRateType });
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsUpdating(true);
     try {
+      let d_rate = editForm.rate_type === 'old' ? 0 : parseFloat(editForm.distributor_rate) || 0;
+      let r_rate = editForm.rate_type === 'old' ? 0 : parseFloat(editForm.retailer_rate) || 0;
+      let old_d_rate = editForm.rate_type === 'new' ? null : parseFloat(editForm.old_distributor_rate) || null;
+      let old_r_rate = editForm.rate_type === 'new' ? null : parseFloat(editForm.old_retailer_rate) || null;
+
       await api.put(`/api/products/${editingVariant.variant_id}`, {
         name: editingVariant.product_name,
         category_name: editingVariant.category_name,
@@ -129,8 +139,10 @@ const AdminProducts = () => {
         pack_size: editForm.pack_size,
         uom: editingVariant.uom,
         pieces_per_box: editForm.pieces_per_box ? parseInt(editForm.pieces_per_box) : null,
-        distributor_rate: parseFloat(editForm.distributor_rate),
-        retailer_rate: parseFloat(editForm.retailer_rate)
+        distributor_rate: d_rate,
+        retailer_rate: r_rate,
+        old_distributor_rate: old_d_rate,
+        old_retailer_rate: old_r_rate
       });
       setEditingVariant(null);
       fetchProducts();
@@ -146,16 +158,23 @@ const AdminProducts = () => {
     e.preventDefault();
     setIsAddingVariant(true);
     try {
+        let d_rate = newVariantForm.rate_type === 'old' ? 0 : parseFloat(newVariantForm.distributor_rate) || 0;
+        let r_rate = newVariantForm.rate_type === 'old' ? 0 : parseFloat(newVariantForm.retailer_rate) || 0;
+        let old_d_rate = newVariantForm.rate_type === 'new' ? null : parseFloat(newVariantForm.old_distributor_rate) || null;
+        let old_r_rate = newVariantForm.rate_type === 'new' ? null : parseFloat(newVariantForm.old_retailer_rate) || null;
+
         await api.post(`/api/products/${addingVariantTo.product_id}/variants`, {
             pack_size: newVariantForm.pack_size,
             pieces_per_box: newVariantForm.pieces_per_box ? parseInt(newVariantForm.pieces_per_box) : null,
-            distributor_rate: parseFloat(newVariantForm.distributor_rate),
-            retailer_rate: parseFloat(newVariantForm.retailer_rate),
+            distributor_rate: d_rate,
+            retailer_rate: r_rate,
+            old_distributor_rate: old_d_rate,
+            old_retailer_rate: old_r_rate,
             mrp: parseFloat(newVariantForm.mrp) || 0
         });
         showToast('Variant added successfully!', 'success');
         setAddingVariantTo(null);
-        setNewVariantForm({ pack_size: '', pieces_per_box: '', distributor_rate: '', retailer_rate: '', mrp: '' });
+        setNewVariantForm({ pack_size: '', pieces_per_box: '', distributor_rate: '', retailer_rate: '', old_distributor_rate: '', old_retailer_rate: '', mrp: '', rate_type: 'new' });
         fetchProducts();
         setExpandedProducts(prev => ({ ...prev, [addingVariantTo.product_id]: true }));
     } catch (err: any) {
@@ -310,6 +329,16 @@ const AdminProducts = () => {
                     {hsnCodes.map(code => <option key={code} value={code}>{code === 'All' ? 'All HSN Codes' : `HSN: ${code}`}</option>)}
                   </select>
 
+                  {/* Rate View Filter */}
+                  <select
+                    value={rateView}
+                    onChange={(e) => setRateView(e.target.value as 'new' | 'old')}
+                    style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--border-color)', outline: 'none', fontSize: '14px', cursor: 'pointer', backgroundColor: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
+                  >
+                    <option value="new">New Rates</option>
+                    <option value="old">Old Rates</option>
+                  </select>
+
                   {/* Price Range */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 500, whiteSpace: 'nowrap' }}>D Rate:</span>
@@ -359,8 +388,8 @@ const AdminProducts = () => {
                     <th style={{ padding: '12px', background: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#64748b', fontWeight: 600, fontSize: '13px', textAlign: 'center' }}>UOM</th>
                     <th style={{ padding: '12px', background: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#64748b', fontWeight: 600, fontSize: '13px' }}>PCS/BOX</th>
                     <th style={{ padding: '12px', background: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#64748b', fontWeight: 600, fontSize: '13px' }}>MRP (₹)</th>
-                    <th style={{ padding: '12px', background: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#64748b', fontWeight: 600, fontSize: '13px' }}>D RATE</th>
-                    <th style={{ padding: '12px', background: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#64748b', fontWeight: 600, fontSize: '13px' }}>R RATE</th>
+                    <th style={{ padding: '12px', background: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#64748b', fontWeight: 600, fontSize: '13px' }}>{rateView === 'old' ? 'OLD D RATE' : 'D RATE'}</th>
+                    <th style={{ padding: '12px', background: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#64748b', fontWeight: 600, fontSize: '13px' }}>{rateView === 'old' ? 'OLD R RATE' : 'R RATE'}</th>
                     <th style={{ padding: '12px', background: '#f8fafc', borderBottom: '2px solid #cbd5e1', color: '#64748b', fontWeight: 600, fontSize: '13px', textAlign: 'right' }}>ACTIONS</th>
                   </tr>
                 </thead>
@@ -375,7 +404,7 @@ const AdminProducts = () => {
                             style={{ background: '#f1f5f9', cursor: 'pointer', borderBottom: '1px solid #e2e8f0' }}
                             onClick={() => toggleExpand(product.product_id)}
                           >
-                            <td colSpan={9} style={{ padding: '10px 12px', fontWeight: 'bold', color: '#0f172a', fontSize: '14px' }}>
+                            <td style={{ padding: '10px 12px', fontWeight: 'bold', color: '#0f172a', fontSize: '14px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <span style={{ display: 'inline-block', width: '16px', color: '#64748b', textAlign: 'center' }}>
                                   {isExpanded ? '▼' : '▶'}
@@ -394,6 +423,13 @@ const AdminProducts = () => {
                                 </div>
                               </div>
                             </td>
+                            <td style={{ padding: '10px 12px', color: '#0f172a', fontSize: '14px', fontWeight: 500 }}>
+                              {product.category_name || '-'}
+                            </td>
+                            <td style={{ padding: '10px 12px', color: '#64748b', fontSize: '14px' }}>
+                              {product.hsn_code || '-'}
+                            </td>
+                            <td colSpan={6}></td>
                             <td style={{ padding: '10px 12px', textAlign: 'right' }}>
                               <button 
                                 onClick={(e) => { e.stopPropagation(); setAddingVariantTo(product); }}
@@ -411,33 +447,35 @@ const AdminProducts = () => {
                           {/* Nested Variant Rows */}
                           {isExpanded && product.variants.map((v: any) => (
                             <tr key={v.variant_id} style={{ background: '#fff', borderBottom: '1px solid #e2e8f0' }}>
-                              <td style={{ padding: '8px 12px', paddingLeft: '80px', color: '#64748b', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#cbd5e1' }}></div>
-                                {product.name}
+                              <td colSpan={3} style={{ padding: '8px 12px', paddingLeft: '80px', color: '#94a3b8', fontSize: '13px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <div style={{ width: '12px', height: '12px', borderLeft: '2px solid #cbd5e1', borderBottom: '2px solid #cbd5e1', borderRadius: '0 0 0 4px', marginTop: '-12px' }}></div>
+                                  Variant
+                                </div>
                               </td>
-                              <td style={{ padding: '8px 12px', color: '#64748b', fontSize: '13px' }}>{product.category_name || '-'}</td>
-                              <td style={{ padding: '8px 12px', color: '#64748b', fontSize: '13px' }}>{product.hsn_code || '-'}</td>
                               <td style={{ padding: '8px 12px', color: '#0f172a', fontWeight: 500, fontSize: '13px' }}>{v.pack_size}</td>
                               <td style={{ padding: '8px 12px', color: '#64748b', fontSize: '13px', textAlign: 'center' }}>{v.uom || '-'}</td>
                               <td style={{ padding: '8px 12px', color: '#0f172a', fontWeight: 500, fontSize: '13px' }}>{v.pieces_per_box}</td>
                               <td style={{ padding: '8px 12px', color: '#0f172a', fontWeight: 500, fontSize: '13px' }}>₹{(v.mrp || 0).toFixed(2)}</td>
-                              <td style={{ padding: '8px 12px', color: '#166534', fontWeight: 600, fontSize: '13px' }}>₹{v.distributor_rate.toFixed(2)}</td>
-                              <td style={{ padding: '8px 12px', color: '#0f172a', fontWeight: 500, fontSize: '13px' }}>₹{v.retailer_rate.toFixed(2)}</td>
-                              <td style={{ padding: '8px 12px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                <button 
-                                  onClick={() => openEditModal({ ...v, product_name: product.name, category_name: product.category_name, hsn_code: product.hsn_code, gst_percent: product.gst_percent })}
-                                  title="Edit Variant"
-                                  style={{ background: '#eff6ff', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: '6px', borderRadius: '6px' }}
-                                >
-                                  <Edit size={16} />
-                                </button>
-                                <button 
-                                  onClick={() => handleDelete(v.variant_id)}
-                                  title="Delete Variant"
-                                  style={{ background: '#fef2f2', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '6px', borderRadius: '6px' }}
-                                >
-                                  <Trash2 size={16} />
-                                </button>
+                              <td style={{ padding: '8px 12px', color: '#166534', fontWeight: 600, fontSize: '13px' }}>₹{(rateView === 'old' ? (v.old_distributor_rate != null ? v.old_distributor_rate : 0) : (v.distributor_rate || 0)).toFixed(2)}</td>
+                              <td style={{ padding: '8px 12px', color: '#0f172a', fontWeight: 500, fontSize: '13px' }}>₹{(rateView === 'old' ? (v.old_retailer_rate != null ? v.old_retailer_rate : 0) : (v.retailer_rate || 0)).toFixed(2)}</td>
+                              <td style={{ padding: '8px 12px' }}>
+                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                  <button 
+                                    onClick={() => openEditModal({ ...v, product_name: product.name, category_name: product.category_name, hsn_code: product.hsn_code, gst_percent: product.gst_percent })}
+                                    title="Edit Variant"
+                                    style={{ background: '#eff6ff', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: '6px', borderRadius: '6px' }}
+                                  >
+                                    <Edit size={16} />
+                                  </button>
+                                  <button 
+                                    onClick={() => handleDelete(v.variant_id)}
+                                    title="Delete Variant"
+                                    style={{ background: '#fef2f2', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '6px', borderRadius: '6px' }}
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -502,9 +540,9 @@ const AdminProducts = () => {
       {editingVariant && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
+          background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px'
         }}>
-          <div style={{ background: '#fff', padding: '32px', borderRadius: '12px', width: '100%', maxWidth: '600px' }}>
+          <div style={{ background: '#fff', padding: '32px', borderRadius: '12px', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto' }}>
             <h3 style={{ marginBottom: '24px', fontSize: '20px' }}>Edit Product</h3>
             <form onSubmit={handleUpdate}>
               <div className="form-grid">
@@ -528,15 +566,43 @@ const AdminProducts = () => {
                   <label>GST Percent (%)</label>
                   <input type="number" step="0.01" value={editingVariant.gst_percent ?? 0} onChange={(e) => setEditingVariant({...editingVariant, gst_percent: parseFloat(e.target.value) || 0})} />
                 </div>
-                <div className="input-group">
-                  <label>Distributor Rate (₹)</label>
-                  <input type="number" step="0.01" value={editForm.distributor_rate || ''} onChange={(e) => setEditForm({...editForm, distributor_rate: e.target.value})} required />
+                
+                <div className="input-group" style={{ gridColumn: '1 / -1' }}>
+                  <label>Rate Type</label>
+                  <select value={editForm.rate_type || 'new'} onChange={e => setEditForm({...editForm, rate_type: e.target.value})}>
+                    <option value="new">New Rates Only</option>
+                    <option value="old">Old Rates Only</option>
+                    <option value="both">Both Rates</option>
+                  </select>
                 </div>
-                <div className="input-group">
-                  <label>Retailer Rate (₹)</label>
-                  <input type="number" step="0.01" value={editForm.retailer_rate || ''} onChange={(e) => setEditForm({...editForm, retailer_rate: e.target.value})} required />
-                </div>
-                <div className="input-group">
+                
+                {editForm.rate_type !== 'old' && (
+                  <>
+                    <div className="input-group">
+                      <label>New Distributor Rate (₹)</label>
+                      <input type="number" step="0.01" value={editForm.distributor_rate || ''} onChange={(e) => setEditForm({...editForm, distributor_rate: e.target.value})} required={editForm.rate_type !== 'old'} />
+                    </div>
+                    <div className="input-group">
+                      <label>New Retailer Rate (₹)</label>
+                      <input type="number" step="0.01" value={editForm.retailer_rate || ''} onChange={(e) => setEditForm({...editForm, retailer_rate: e.target.value})} required={editForm.rate_type !== 'old'} />
+                    </div>
+                  </>
+                )}
+                
+                {editForm.rate_type !== 'new' && (
+                  <>
+                    <div className="input-group">
+                      <label>Old Distributor Rate (₹)</label>
+                      <input type="number" step="0.01" value={editForm.old_distributor_rate || ''} onChange={(e) => setEditForm({...editForm, old_distributor_rate: e.target.value})} required={editForm.rate_type !== 'new'} />
+                    </div>
+                    <div className="input-group">
+                      <label>Old Retailer Rate (₹)</label>
+                      <input type="number" step="0.01" value={editForm.old_retailer_rate || ''} onChange={(e) => setEditForm({...editForm, old_retailer_rate: e.target.value})} required={editForm.rate_type !== 'new'} />
+                    </div>
+                  </>
+                )}
+
+                <div className="input-group" style={{ gridColumn: '1 / -1' }}>
                   <label>MRP (₹)</label>
                   <input type="number" step="0.01" value={editForm.mrp || ''} onChange={(e) => setEditForm({...editForm, mrp: e.target.value})} required />
                 </div>
@@ -556,9 +622,9 @@ const AdminProducts = () => {
       {addingVariantTo && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
+          background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px'
         }}>
-          <div style={{ background: '#fff', padding: '32px', borderRadius: '12px', width: '100%', maxWidth: '600px' }}>
+          <div style={{ background: '#fff', padding: '32px', borderRadius: '12px', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto' }}>
             <h3 style={{ marginBottom: '8px', fontSize: '20px' }}>Add New Variant</h3>
             <p style={{ color: '#64748b', marginBottom: '24px' }}>Adding variant to <strong>{addingVariantTo.name}</strong></p>
             <form onSubmit={handleAddVariantSubmit}>
@@ -571,15 +637,43 @@ const AdminProducts = () => {
                   <label>Pieces Per Box (Auto-extracted if blank)</label>
                   <input type="number" min="1" value={newVariantForm.pieces_per_box} onChange={(e) => setNewVariantForm({...newVariantForm, pieces_per_box: e.target.value})} placeholder="e.g. 180" />
                 </div>
-                <div className="input-group">
-                  <label>Distributor Rate (₹)</label>
-                  <input type="number" step="0.01" value={newVariantForm.distributor_rate} onChange={(e) => setNewVariantForm({...newVariantForm, distributor_rate: e.target.value})} required />
+                
+                <div className="input-group" style={{ gridColumn: '1 / -1' }}>
+                  <label>Rate Type</label>
+                  <select value={newVariantForm.rate_type} onChange={e => setNewVariantForm({...newVariantForm, rate_type: e.target.value})}>
+                    <option value="new">New Rates Only</option>
+                    <option value="old">Old Rates Only</option>
+                    <option value="both">Both Rates</option>
+                  </select>
                 </div>
-                <div className="input-group">
-                  <label>Retailer Rate (₹)</label>
-                  <input type="number" step="0.01" value={newVariantForm.retailer_rate} onChange={(e) => setNewVariantForm({...newVariantForm, retailer_rate: e.target.value})} required />
-                </div>
-                <div className="input-group">
+                
+                {newVariantForm.rate_type !== 'old' && (
+                  <>
+                    <div className="input-group">
+                      <label>New Distributor Rate (₹)</label>
+                      <input type="number" step="0.01" value={newVariantForm.distributor_rate} onChange={(e) => setNewVariantForm({...newVariantForm, distributor_rate: e.target.value})} required={newVariantForm.rate_type !== 'old'} />
+                    </div>
+                    <div className="input-group">
+                      <label>New Retailer Rate (₹)</label>
+                      <input type="number" step="0.01" value={newVariantForm.retailer_rate} onChange={(e) => setNewVariantForm({...newVariantForm, retailer_rate: e.target.value})} required={newVariantForm.rate_type !== 'old'} />
+                    </div>
+                  </>
+                )}
+                
+                {newVariantForm.rate_type !== 'new' && (
+                  <>
+                    <div className="input-group">
+                      <label>Old Distributor Rate (₹)</label>
+                      <input type="number" step="0.01" value={newVariantForm.old_distributor_rate} onChange={(e) => setNewVariantForm({...newVariantForm, old_distributor_rate: e.target.value})} required={newVariantForm.rate_type !== 'new'} />
+                    </div>
+                    <div className="input-group">
+                      <label>Old Retailer Rate (₹)</label>
+                      <input type="number" step="0.01" value={newVariantForm.old_retailer_rate} onChange={(e) => setNewVariantForm({...newVariantForm, old_retailer_rate: e.target.value})} required={newVariantForm.rate_type !== 'new'} />
+                    </div>
+                  </>
+                )}
+
+                <div className="input-group" style={{ gridColumn: '1 / -1' }}>
                   <label>MRP (₹)</label>
                   <input type="number" step="0.01" value={newVariantForm.mrp} onChange={(e) => setNewVariantForm({...newVariantForm, mrp: e.target.value})} required />
                 </div>

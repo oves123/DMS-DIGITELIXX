@@ -472,7 +472,8 @@ const AdminDistributors = () => {
                             )}
                           </td>
                           <td style={{ fontWeight: 'bold', color: '#059669' }}>₹{d.wallet_balance ? parseFloat(d.wallet_balance).toFixed(2) : '0.00'}</td>
-                          <td style={{ display: 'flex', gap: '8px', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+                          <td onClick={(e) => e.stopPropagation()}>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                             <button 
                               onClick={() => setLedgerDistributor({ id: d.user_id, name: d.firm_name })}
                               title="View Ledger"
@@ -525,6 +526,7 @@ const AdminDistributors = () => {
                             >
                               <Trash2 size={16} />
                             </button>
+                            </div>
                           </td>
                         </tr>
                         {expandedRow === d.user_id && (

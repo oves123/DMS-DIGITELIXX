@@ -1,9 +1,12 @@
 import { Hono } from 'hono';
 import { sign } from 'hono/jwt';
 import bcrypt from 'bcryptjs';
-import Models from '../db/models';
+import { drizzle } from 'drizzle-orm/d1';
+import { eq } from 'drizzle-orm';
+import * as schema from '../db/schema';
+import type { Env } from '../index';
 
-const router = new Hono<{ Bindings: { JWT_SECRET: string } }>();
+const router = new Hono<{ Bindings: Env }>();
 
 router.post('/login', async (c) => {
     try {
@@ -14,7 +17,10 @@ router.post('/login', async (c) => {
             return c.json({ message: 'Please provide phone number and password' }, 400);
         }
 
-        const user = await Models.User.findOne({ phone: phone_number }) as any;
+        const db = drizzle(c.env.DB, { schema });
+        const user = await db.query.users.findFirst({
+            where: eq(schema.users.phone, phone_number)
+        });
 
         if (!user) {
             return c.json({ message: 'Invalid credentials' }, 401);
@@ -28,7 +34,7 @@ router.post('/login', async (c) => {
         const token = await sign(
             { 
                 user_id: user.sql_user_id, 
-                mongo_id: user._id,
+                mongo_id: user.id,
                 role: user.role, 
                 firm_name: user.firm_name,
                 exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // 30 days
@@ -41,7 +47,7 @@ router.post('/login', async (c) => {
             token,
             user: {
                 user_id: user.sql_user_id,
-                mongo_id: user._id,
+                mongo_id: user.id,
                 role: user.role,
                 firm_name: user.firm_name,
                 phone_number: user.phone,
@@ -67,10 +73,10 @@ router.put('/reset-password', async (c) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(new_password, salt);
 
-        await Models.User.findOneAndUpdate(
-            { sql_user_id: user_id }, 
-            { password_hash: hashedPassword }
-        );
+        const db = drizzle(c.env.DB, { schema });
+        await db.update(schema.users)
+            .set({ password_hash: hashedPassword })
+            .where(eq(schema.users.sql_user_id, parseInt(user_id)));
 
         return c.json({ message: 'Password updated successfully' });
     } catch (error) {

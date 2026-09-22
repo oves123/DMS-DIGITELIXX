@@ -275,9 +275,11 @@ const BulkOrderForm = () => {
                     
                     return (
                       <tr key={variant.variant_id} style={{ background: '#fff', borderBottom: '1px solid #e2e8f0' }}>
-                        <td style={{ padding: '6px 12px', paddingLeft: '80px', color: '#64748b', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#cbd5e1' }}></div>
-                          {variant.pack_size}
+                        <td style={{ padding: '6px 12px', paddingLeft: '80px', color: '#64748b', fontSize: '13px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#cbd5e1' }}></div>
+                            {variant.pack_size}
+                          </div>
                         </td>
                         <td style={{ padding: '6px 12px', color: '#0f172a', fontWeight: 500, fontSize: '13px' }}>
                           {variant.pack_size}

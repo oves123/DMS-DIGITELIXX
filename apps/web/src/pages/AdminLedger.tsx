@@ -247,6 +247,19 @@ const AdminLedger = () => {
                                 {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                               </span>
                               {dist.firm_name}
+                              {dist.invoices?.length > 0 && (new Date().getTime() - new Date(dist.invoices[0].created_at).getTime()) < 24 * 60 * 60 * 1000 && (
+                                <span style={{
+                                  background: '#ef4444',
+                                  color: 'white',
+                                  fontSize: '10px',
+                                  padding: '2px 6px',
+                                  borderRadius: '10px',
+                                  fontWeight: 'bold',
+                                  animation: 'pulse 2s infinite'
+                                }}>
+                                  NEW
+                                </span>
+                              )}
                             </div>
                           </td>
                           <td style={{ padding: '12px', fontWeight: 600 }}>{dist.total_invoices}</td>
@@ -377,9 +390,9 @@ const AdminLedger = () => {
                                 {inv.payment_status || 'UNPAID'}
                               </span>
                             </td>
-                            <td style={{ padding: '10px 12px', fontWeight: 500 }}>₹{inv.grand_total}</td>
-                            <td style={{ padding: '10px 12px', color: '#059669' }}>₹{inv.paid_amount || 0}</td>
-                            <td style={{ padding: '10px 12px', color: '#dc2626' }}>₹{(inv.grand_total - (inv.paid_amount || 0)).toFixed(2)}</td>
+                            <td style={{ padding: '10px 12px', fontWeight: 500 }}>₹{Number(inv.grand_total).toFixed(2)}</td>
+                            <td style={{ padding: '10px 12px', color: '#059669' }}>₹{Number(inv.paid_amount || 0).toFixed(2)}</td>
+                            <td style={{ padding: '10px 12px', color: '#dc2626' }}>₹{(Number(inv.grand_total) - Number(inv.paid_amount || 0)).toFixed(2)}</td>
                           </tr>
                         ))}
                       </Fragment>

@@ -3,6 +3,8 @@ import api from '../lib/api';
 import { X, Printer, IndianRupee, Download } from 'lucide-react';
 import { signatureBase64 } from '../assets/signatureBase64';
 import RecordPaymentModal from './RecordPaymentModal';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 interface InvoiceModalProps {
   orderId: number;
@@ -148,17 +150,34 @@ const InvoiceModal = ({ orderId, onClose }: InvoiceModalProps) => {
   const handleDownloadPdf = async () => {
     try {
       setDownloading(true);
-      const response = await api.get(`/api/ledger/invoice/${orderId}/download`, {
-        responseType: 'blob'
+      const invoiceElement = document.getElementById('invoice-content');
+      if (!invoiceElement) throw new Error('Invoice content not found');
+
+      const canvas = await html2canvas(invoiceElement, { 
+        scale: 2, 
+        useCORS: true,
+        backgroundColor: '#ffffff'
       });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `Invoice_${data.invoice.invoice_number}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      const imgData = canvas.toDataURL('image/png');
+      
+      // A4 format size is 210 x 297 mm
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      // Ensure the image fits within the A4 page height, otherwise scale it down
+      const finalHeight = pdfHeight > pdf.internal.pageSize.getHeight() ? pdf.internal.pageSize.getHeight() : pdfHeight;
+      const finalWidth = pdfHeight > pdf.internal.pageSize.getHeight() ? (canvas.width * finalHeight) / canvas.height : pdfWidth;
+
+      pdf.addImage(imgData, 'PNG', 0, 0, finalWidth, finalHeight);
+      pdf.save(`Invoice_${data.invoice.invoice_number}.pdf`);
     } catch (err) {
+      console.error(err);
       alert('Failed to generate PDF. Please try again.');
     } finally {
       setDownloading(false);

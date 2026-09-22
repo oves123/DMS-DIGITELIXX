@@ -9,8 +9,8 @@ const AdminCreateOrder = () => {
   const [products, setProducts] = useState<any[]>([]);
   
   const [selectedClient, setSelectedClient, clearClient] = useAutoSave<any>('admin_create_order_client', null);
-  const [priceListVersion, setPriceListVersion] = useState<'new' | 'old'>('new');
-  const [pricingTier, setPricingTier] = useState<'distributor' | 'retailer'>('distributor');
+  const [priceListVersion, setPriceListVersion, clearPriceListVersion] = useAutoSave<'new' | 'old'>('admin_create_order_price_version', 'new');
+  const [pricingTier, setPricingTier, clearPricingTier] = useAutoSave<'distributor' | 'retailer'>('admin_create_order_pricing_tier', 'distributor');
   
   const [cart, setCart, clearCart] = useAutoSave<{ [key: number]: { qty: number, variant: any, price: number, product_name?: string } }>('admin_create_order_cart', {});
   
@@ -207,6 +207,8 @@ const AdminCreateOrder = () => {
       clearCart();
       setSelectedClient(null);
       clearClient();
+      clearPriceListVersion();
+      clearPricingTier();
     } catch (err: any) {
       showToast(err.response?.data?.message || 'Failed to place order', 'error');
     } finally {
@@ -363,10 +365,10 @@ const AdminCreateOrder = () => {
                           
                           return (
                             <tr key={v.variant_id} style={{ background: '#fff', borderBottom: '1px solid #e2e8f0' }}>
-                              <td style={{ padding: '8px 12px', paddingLeft: '32px', color: '#64748b', fontSize: '13px' }}>
+                              <td style={{ padding: '8px 12px', paddingLeft: '48px', color: '#94a3b8', fontSize: '13px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#cbd5e1' }}></div>
-                                  {p.name}
+                                  <div style={{ width: '12px', height: '12px', borderLeft: '2px solid #cbd5e1', borderBottom: '2px solid #cbd5e1', borderRadius: '0 0 0 4px', marginTop: '-12px' }}></div>
+                                  Variant
                                 </div>
                               </td>
                               <td style={{ padding: '8px 12px', color: '#0f172a', fontWeight: 500, fontSize: '13px' }}>{v.pack_size}</td>
