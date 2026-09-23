@@ -79,6 +79,14 @@ router.get('/', async (c) => {
         });
 
         const ledgerArray = Object.values(userMap).filter((u: any) => u.total_invoices > 0);
+        
+        // Ghost Wallet Fix: Subtract wallet balance from total pending
+        ledgerArray.forEach((u: any) => {
+            if (u.wallet_balance > 0) {
+                u.total_pending -= u.wallet_balance;
+            }
+        });
+
         ledgerArray.sort((a: any, b: any) => {
             const dateA: any = a.invoices.length > 0 ? new Date(a.invoices[0].created_at) : new Date(0);
             const dateB: any = b.invoices.length > 0 ? new Date(b.invoices[0].created_at) : new Date(0);
@@ -373,6 +381,7 @@ router.get('/payment/distributor/:distributor_id/download', async (c) => {
         }
         
         const payments = await db.select().from(schema.payments).where(eq(schema.payments.distributor_id, user.id));
+        const creditNotes = await db.select().from(schema.creditNotes).where(eq(schema.creditNotes.distributor_id, user.id));
         
         let total_billed = 0;
         let total_paid = 0;
@@ -396,6 +405,19 @@ router.get('/payment/distributor/:distributor_id/download', async (c) => {
                 type: `Payment (${p.payment_mode}) ${p.reference_number ? ` - ${p.reference_number}` : ''}`,
                 debit: null,
                 credit: p.amount,
+            });
+        });
+
+        creditNotes.forEach((cn: any) => {
+            // Ignore Cash Refunds since they were paid out and shouldn't reduce the pending balance
+            if (cn.reason && cn.reason.includes('[CASH REFUND]')) {
+                return;
+            }
+            history.push({
+                date: cn.created_at,
+                type: `Credit Note #${cn.cn_number || 'N/A'}`,
+                debit: null,
+                credit: cn.total_amount,
             });
         });
 
@@ -597,8 +619,11 @@ router.post('/credit-note', async (c) => {
         const body = await c.req.json();
         const db = drizzle(c.env.DB, { schema });
         
+        const parsedUserId = parseInt(body.distributor_id);
         const user = await db.query.users.findFirst({
-            where: or(eq(schema.users.id, body.distributor_id), eq(schema.users.sql_user_id, parseInt(body.distributor_id)))
+            where: isNaN(parsedUserId) 
+                ? eq(schema.users.id, body.distributor_id)
+                : or(eq(schema.users.id, body.distributor_id), eq(schema.users.sql_user_id, parsedUserId))
         });
         if (!user) return c.json({ message: 'Distributor not found' }, 404);
         
@@ -628,11 +653,14 @@ router.post('/credit-note', async (c) => {
             reason: body.reason
         });
         
-        for (const item of body.items) {
+        for (const item of body.items || []) {
             let varId = null;
             if (item.variant_id) {
+                const parsedVarId = parseInt(item.variant_id);
                 const variant = await db.query.variants.findFirst({
-                    where: or(eq(schema.variants.id, item.variant_id), eq(schema.variants.sql_variant_id, parseInt(item.variant_id)))
+                    where: isNaN(parsedVarId)
+                        ? eq(schema.variants.id, item.variant_id)
+                        : or(eq(schema.variants.id, item.variant_id), eq(schema.variants.sql_variant_id, parsedVarId))
                 });
                 if (variant) varId = variant.id;
             }

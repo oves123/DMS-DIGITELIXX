@@ -172,7 +172,7 @@ const CreditNoteModal: React.FC<CreditNoteModalProps> = ({ distributor, onClose,
         }
         payload.direct_amount = amt;
         payload.total_amount = amt;
-        payload.reason = directReason;
+        payload.reason = isPaidOut ? `[CASH REFUND] ${directReason}` : directReason;
     } else {
         const itemsPayload = Object.values(selectedItems).map((i: any) => {
             const qty = parseInt(i.return_qty) || 0;
@@ -204,8 +204,8 @@ const CreditNoteModal: React.FC<CreditNoteModalProps> = ({ distributor, onClose,
         }
         payload.invoice_id = selectedInvoice.invoice_id;
         payload.items = itemsPayload;
-        payload.total_amount = totalCalculatedCredit;
-        payload.reason = 'Defective Products Return';
+        payload.total_amount = Math.round(totalWithGst);
+        payload.reason = isPaidOut ? '[CASH REFUND] Defective Products Return' : 'Defective Products Return';
     }
 
     setIsSubmitting(true);
