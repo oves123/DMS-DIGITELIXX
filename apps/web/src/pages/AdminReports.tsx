@@ -179,7 +179,12 @@ const AdminReports = () => {
   const filteredTransactions = transactions.filter(t => 
     transDistributor === 'all' || 
     t.firm_name === distributorsList.find(d => d.user_id.toString() === transDistributor)?.firm_name
-  );
+  ).sort((a, b) => {
+    const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+    if (dateDiff !== 0) return dateDiff;
+    // If dates are exactly the same, sort by invoice number descending
+    return (b.invoice_number || '').localeCompare(a.invoice_number || '');
+  });
 
   // Download Excel
   const handleDownloadExcel = () => {

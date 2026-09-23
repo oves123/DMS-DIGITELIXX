@@ -637,7 +637,7 @@ router.post('/credit-note', async (c) => {
         const lastCNs = await db.select().from(schema.creditNotes).where(like(schema.creditNotes.cn_number, `%/${finYearString}`));
         let nextSeq = 1;
         if (lastCNs.length > 0) {
-            lastCNs.sort((a, b) => b.created_at!.getTime() - a.created_at!.getTime());
+            lastCNs.sort((a, b) => (b.created_at?.getTime() || 0) - (a.created_at?.getTime() || 0));
             const parts = lastCNs[0].cn_number!.split('/');
             nextSeq = parseInt(parts[0], 10) + 1;
         }
@@ -650,7 +650,8 @@ router.post('/credit-note', async (c) => {
             distributor_id: user.id,
             cn_number: creditNoteNumber,
             total_amount: body.total_amount,
-            reason: body.reason
+            reason: body.reason,
+            created_at: new Date()
         });
         
         for (const item of body.items || []) {
@@ -689,8 +690,72 @@ router.post('/credit-note', async (c) => {
 });
 
 router.get('/credit-note/:cn_id/download', async (c) => {
-    // Basic stub, real PDF generation to be added if needed
-    return c.json({ message: 'Not implemented' }, 501);
+    try {
+        const cnId = c.req.param('cn_id');
+        const db = drizzle(c.env.DB, { schema });
+
+        const parsedCnId = parseInt(cnId);
+        const creditNote = await db.query.creditNotes.findFirst({
+            where: isNaN(parsedCnId)
+                ? eq(schema.creditNotes.id, cnId)
+                : or(eq(schema.creditNotes.id, cnId), eq(schema.creditNotes.sql_credit_note_id, parsedCnId))
+        });
+
+        if (!creditNote) {
+            return c.json({ message: 'Credit Note not found' }, 404);
+        }
+
+        const items = await db.select().from(schema.creditNoteItems).where(eq(schema.creditNoteItems.credit_note_id, creditNote.id));
+        
+        // Enrich items with product names
+        for (const item of items) {
+            if (item.variant_id) {
+                const variant = await db.query.variants.findFirst({
+                    where: eq(schema.variants.id, item.variant_id)
+                });
+                if (variant) {
+                    const product = await db.query.products.findFirst({
+                        where: eq(schema.products.id, variant.product_id)
+                    });
+                    if (product) {
+                        (item as any).product_name = `${product.name} (${variant.pack_size})`;
+                    }
+                }
+            }
+        }
+
+        const user = await db.query.users.findFirst({
+            where: eq(schema.users.id, creditNote.distributor_id)
+        });
+
+        if (!user) {
+            return c.json({ message: 'Distributor not found' }, 404);
+        }
+
+        const settings = await db.query.companySettings.findFirst() || {};
+
+        const creditNoteData = {
+            credit_note: {
+                ...creditNote,
+                credit_note_number: creditNote.cn_number || `CN-${creditNote.id.substring(0,6)}`
+            },
+            items
+        };
+
+        const pdfUrl = await generateCreditNotePdf(creditNoteData, user, settings, c.env.MY_BUCKET as any);
+        
+        const file = await c.env.MY_BUCKET.get(pdfUrl);
+        if (!file) {
+            return c.json({ message: 'File not found on server' }, 404);
+        }
+
+        c.header('Content-Type', 'application/pdf');
+        c.header('Content-Disposition', `attachment; filename="CreditNote_${creditNote.cn_number ? creditNote.cn_number.replace(/[^a-z0-9]/gi, '_') : 'Unknown'}.pdf"`);
+        return c.body(file.body as any);
+    } catch (err) {
+        console.error('Failed to generate credit note PDF:', err);
+        return c.json({ message: 'Failed to generate PDF' }, 500);
+    }
 });
 
 export default router;
