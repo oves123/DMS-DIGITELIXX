@@ -15,6 +15,13 @@
       "when": 1790068684905,
       "tag": "0001_brown_beast",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790237176690,
+      "tag": "0002_short_starbolt",
+      "breakpoints": true
     }
   ]
 }

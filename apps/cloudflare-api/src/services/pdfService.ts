@@ -211,15 +211,9 @@ export const generateCreditNotePdf = async (creditNoteData: any, distributorDeta
                     [
                       { text: 'Total', colSpan: 6, alignment: 'right', bold: true, margin: [0, 4, 0, 4] },
                       {}, {}, {}, {}, {},
-                      { text: Math.round(parseFloat(credit_note.amount) || 0).toFixed(2), alignment: 'right', bold: true, margin: [0, 4, 0, 4] }
+                      { text: Math.round(parseFloat(credit_note.total_amount) || 0).toFixed(2), alignment: 'right', bold: true, margin: [0, 4, 0, 4] }
                     ]
                   ]
-                },
-                layout: {
-                  hLineWidth: () => 1,
-                  vLineWidth: () => 1,
-                  hLineColor: () => '#000000',
-                  vLineColor: () => '#000000'
                 },
                 margin: [0, 0, 0, 0]
               }
@@ -242,10 +236,10 @@ export const generateCreditNotePdf = async (creditNoteData: any, distributorDeta
                         border: [false, false, true, false]
                       },
                       {
-                        text: [
-                          { text: 'For Anand Enterprises\n', bold: true },
-                          signatureBase64 ? { image: signatureBase64, width: 100, alignment: 'center' } : '\n\n',
-                          { text: 'Authorised Signatory', bold: true }
+                        stack: [
+                          { text: 'For Anand Enterprises\n', bold: true, alignment: 'right' },
+                          signatureBase64 ? { image: signatureBase64, width: 75, alignment: 'right', margin: [0, 2, 0, 2] } : { text: '\n\n', alignment: 'right' },
+                          { text: 'Authorised Signatory', bold: true, alignment: 'right' }
                         ],
                         alignment: 'right',
                         margin: [4, 4, 4, 4],

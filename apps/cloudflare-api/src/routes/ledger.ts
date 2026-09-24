@@ -719,8 +719,15 @@ router.get('/credit-note/:cn_id/download', async (c) => {
                     });
                     if (product) {
                         (item as any).product_name = `${product.name} (${variant.pack_size})`;
+                        (item as any).gst_percent = product.gst_percent;
+                    } else {
+                        (item as any).product_name = item.reason || 'Unknown Product';
                     }
+                } else {
+                    (item as any).product_name = item.reason || 'Unknown Product';
                 }
+            } else {
+                (item as any).product_name = item.reason || 'Unknown Product';
             }
         }
 

@@ -1,0 +1,1 @@
+ALTER TABLE `credit_notes` ADD `applied_details` text;

@@ -111,6 +111,7 @@ export const creditNotes = sqliteTable('credit_notes', {
     cn_number: text('cn_number'),
     total_amount: real('total_amount').notNull(),
     reason: text('reason'),
+    applied_details: text('applied_details'),
     created_at: integer('created_at', { mode: 'timestamp_ms' })
 });
 
