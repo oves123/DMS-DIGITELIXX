@@ -108,14 +108,41 @@ router.post('/', async (c) => {
 
         const orderId = crypto.randomUUID();
         
-        const lastOrder = await db.select().from(schema.orders).orderBy(desc(schema.orders.sql_order_id)).limit(1);
+        let inserted = false;
+        let attempts = 0;
         let nextSqlOrderId = 1;
-        if (lastOrder.length > 0 && lastOrder[0].sql_order_id) {
-            nextSqlOrderId = lastOrder[0].sql_order_id + 1;
+
+        while (!inserted && attempts < 5) {
+            const lastOrder = await db.select().from(schema.orders).orderBy(desc(schema.orders.sql_order_id)).limit(1);
+            if (lastOrder.length > 0 && lastOrder[0].sql_order_id) {
+                nextSqlOrderId = lastOrder[0].sql_order_id + 1;
+            }
+
+            try {
+                await db.insert(schema.orders).values({
+                    id: orderId,
+                    sql_order_id: nextSqlOrderId,
+                    distributor_id: user.id,
+                    status: 'PENDING',
+                    apply_wallet: apply_wallet || false,
+                    order_date: new Date(),
+                    created_at: new Date()
+                });
+                inserted = true;
+            } catch (err: any) {
+                if (err.message && err.message.includes('UNIQUE constraint failed')) {
+                    attempts++;
+                } else {
+                    throw err;
+                }
+            }
+        }
+
+        if (!inserted) {
+            return c.json({ message: 'High traffic detected. Please try placing your order again.' }, 503);
         }
 
         const newItems: any[] = [];
-        
         for (let item of items) {
             let condition;
             const strId = String(item.variant_id);
@@ -143,24 +170,16 @@ router.post('/', async (c) => {
             }
         }
 
-        await db.insert(schema.orders).values({
-            id: orderId,
-            sql_order_id: nextSqlOrderId,
-            distributor_id: user.id,
-            status: 'PENDING',
-            apply_wallet: apply_wallet || false,
-            order_date: new Date(),
-            created_at: new Date()
-        });
-
         if (newItems.length > 0) {
-            await db.insert(schema.orderItems).values(newItems);
+            for (let i = 0; i < newItems.length; i += 10) {
+                await db.insert(schema.orderItems).values(newItems.slice(i, i + 10));
+            }
         }
 
         return c.json({ message: 'Order submitted successfully', order_id: orderId }, 201);
-    } catch (err) {
+    } catch (err: any) {
         console.error(err);
-        return c.json({ message: 'Failed to submit order' }, 500);
+        return c.json({ message: 'Failed to submit order', error: err.message }, 500);
     }
 });
 
@@ -416,7 +435,9 @@ router.put('/:id', async (c) => {
         }
 
         if (newItems.length > 0) {
-            await db.insert(schema.orderItems).values(newItems);
+            for (let i = 0; i < newItems.length; i += 10) {
+                await db.insert(schema.orderItems).values(newItems.slice(i, i + 10));
+            }
         }
 
         return c.json({ message: 'Order updated successfully', order_id: order.id });
