@@ -117,9 +117,20 @@ router.post('/', async (c) => {
         const newItems: any[] = [];
         
         for (let item of items) {
+            let condition;
+            const strId = String(item.variant_id);
+            if (/^\d+$/.test(strId)) {
+                // It's a purely numeric ID (sql_variant_id)
+                condition = or(eq(schema.variants.id, strId), eq(schema.variants.sql_variant_id, parseInt(strId, 10)));
+            } else {
+                // It's a UUID
+                condition = eq(schema.variants.id, strId);
+            }
+
             const variant = await db.query.variants.findFirst({
-                where: or(eq(schema.variants.id, item.variant_id), eq(schema.variants.sql_variant_id, parseInt(item.variant_id)))
+                where: condition
             });
+
             if (variant) {
                 newItems.push({
                     id: crypto.randomUUID(),
@@ -381,8 +392,16 @@ router.put('/:id', async (c) => {
 
         const newItems: any[] = [];
         for (let item of items) {
+            let condition;
+            const strId = String(item.variant_id);
+            if (/^\d+$/.test(strId)) {
+                condition = or(eq(schema.variants.id, strId), eq(schema.variants.sql_variant_id, parseInt(strId, 10)));
+            } else {
+                condition = eq(schema.variants.id, strId);
+            }
+
             const variant = await db.query.variants.findFirst({
-                where: or(eq(schema.variants.id, item.variant_id), eq(schema.variants.sql_variant_id, parseInt(item.variant_id)))
+                where: condition
             });
             if(variant) {
                 newItems.push({
