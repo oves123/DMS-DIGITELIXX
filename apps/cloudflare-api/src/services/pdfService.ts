@@ -490,9 +490,9 @@ export const generateLedgerPdf = async (ledgerData: any, distributorDetails: any
                             table: {
                               widths: ['*', 'auto'],
                               body: [
-                                [{ text: 'Total Billed:', border: [false, false, false, false] }, { text: `₹${summary.total_billed.toFixed(2)}`, border: [false, false, false, false], alignment: 'right' }],
-                                [{ text: 'Total Paid:', border: [false, false, false, false] }, { text: `₹${summary.total_paid.toFixed(2)}`, border: [false, false, false, false], alignment: 'right', color: '#059669' }],
-                                [{ text: 'Pending Balance:', bold: true, border: [false, false, false, false] }, { text: `₹${summary.total_pending.toFixed(2)}`, bold: true, border: [false, false, false, false], alignment: 'right', color: '#dc2626' }]
+                                [{ text: 'Total Billed:', border: [false, false, false, false] }, { text: `₹${Number(summary.total_billed || 0).toFixed(2)}`, border: [false, false, false, false], alignment: 'right' }],
+                                [{ text: 'Total Paid:', border: [false, false, false, false] }, { text: `₹${Number(summary.total_paid || 0).toFixed(2)}`, border: [false, false, false, false], alignment: 'right', color: '#059669' }],
+                                [{ text: 'Pending Balance:', bold: true, border: [false, false, false, false] }, { text: `₹${Number(summary.total_pending || 0).toFixed(2)}`, bold: true, border: [false, false, false, false], alignment: 'right', color: '#dc2626' }]
                               ]
                             },
                             layout: 'noBorders'
@@ -530,9 +530,9 @@ export const generateLedgerPdf = async (ledgerData: any, distributorDetails: any
                     ...(history || []).map((row: any) => [
                       { text: new Date(row.date).toLocaleDateString('en-GB').replace(/\//g, '-'), fontSize: 10, margin: [4, 4, 4, 4] },
                       { text: row.type, fontSize: 10, margin: [4, 4, 4, 4] },
-                      { text: row.debit ? row.debit.toFixed(2) : '-', fontSize: 10, alignment: 'right', margin: [4, 4, 4, 4] },
-                      { text: row.credit ? row.credit.toFixed(2) : '-', fontSize: 10, alignment: 'right', color: row.credit ? '#059669' : 'black', margin: [4, 4, 4, 4] },
-                      { text: row.balance.toFixed(2), fontSize: 10, alignment: 'right', bold: true, margin: [4, 4, 4, 4] }
+                      { text: row.debit ? Number(row.debit).toFixed(2) : '-', fontSize: 10, alignment: 'right', margin: [4, 4, 4, 4] },
+                      { text: row.credit ? Number(row.credit).toFixed(2) : '-', fontSize: 10, alignment: 'right', color: row.credit ? '#059669' : 'black', margin: [4, 4, 4, 4] },
+                      { text: Number(row.balance || 0).toFixed(2), fontSize: 10, alignment: 'right', bold: true, margin: [4, 4, 4, 4] }
                     ])
                   ]
                 },
