@@ -427,27 +427,173 @@ export const generateLedgerPdf = async (ledgerData: any, distributorDetails: any
 
   const docDefinition: any = {
     content: [
-      { text: 'STATEMENT OF ACCOUNT', style: 'header', alignment: 'center' },
-      { text: `Distributor: ${distributorDetails.firm_name}\nTotal Pending: ₹${summary.total_pending}`, margin: [0, 10, 0, 10] },
       {
         table: {
-          headerRows: 1,
-          widths: ['auto', '*', 'auto', 'auto', 'auto'],
+          widths: ['*'],
           body: [
-            ['Date', 'Details', 'Debit', 'Credit', 'Balance'],
-            ...(history || []).map((row: any) => [
-              new Date(row.date).toLocaleDateString(),
-              row.type,
-              row.debit || '-',
-              row.credit || '-',
-              row.balance
-            ])
+            [
+              { text: 'STATEMENT OF ACCOUNT', alignment: 'center', bold: true, fontSize: 14, margin: [0, 4, 0, 4], fillColor: '#f4fbf7' }
+            ],
+            [
+              {
+                table: {
+                  widths: ['*', 180],
+                  body: [
+                    [
+                      {
+                        text: [
+                          { text: 'Anand Enterprises\n', fontSize: 18, bold: true },
+                          `Address : ${settings?.address || ''}\n`,
+                          `Mobile No. : ${settings?.mobile_number || '9892660176'} , State : ${settings?.state || 'Maharashtra'}\n`,
+                          `GST No : ${settings?.gst_number || ''} , FSSAI No : ${settings?.fssai_number || ''}`
+                        ],
+                        margin: [4, 4, 4, 4],
+                        border: [false, false, true, false]
+                      },
+                      {
+                        image: logoBase64,
+                        width: 120,
+                        alignment: 'center',
+                        margin: [0, 10, 0, 0],
+                        border: [false, false, false, false]
+                      }
+                    ]
+                  ]
+                },
+                margin: [0, 0, 0, 0],
+                layout: {
+                  hLineWidth: () => 0,
+                  vLineWidth: (i: number) => (i === 1 ? 2 : 0)
+                }
+              }
+            ],
+            [
+              {
+                table: {
+                  widths: ['*', 220],
+                  body: [
+                    [
+                      {
+                        text: [
+                          { text: `Distributor / Firm: ${distributorDetails.firm_name}\n`, bold: true },
+                          distributorDetails.owner_name ? `Owner Name: ${distributorDetails.owner_name}\n` : '',
+                          `Address: ${distributorDetails.address || '-'}\n`,
+                          `Contact: ${distributorDetails.mobile_number || '-'}`
+                        ],
+                        margin: [4, 4, 4, 4],
+                        border: [false, false, true, false]
+                      },
+                      {
+                        stack: [
+                          { text: 'Account Summary', bold: true, margin: [0, 0, 0, 8] },
+                          {
+                            table: {
+                              widths: ['*', 'auto'],
+                              body: [
+                                [{ text: 'Total Billed:', border: [false, false, false, false] }, { text: `₹${summary.total_billed.toFixed(2)}`, border: [false, false, false, false], alignment: 'right' }],
+                                [{ text: 'Total Paid:', border: [false, false, false, false] }, { text: `₹${summary.total_paid.toFixed(2)}`, border: [false, false, false, false], alignment: 'right', color: '#059669' }],
+                                [{ text: 'Pending Balance:', bold: true, border: [false, false, false, false] }, { text: `₹${summary.total_pending.toFixed(2)}`, bold: true, border: [false, false, false, false], alignment: 'right', color: '#dc2626' }]
+                              ]
+                            },
+                            layout: 'noBorders'
+                          }
+                        ],
+                        margin: [4, 4, 4, 4],
+                        border: [false, false, false, false]
+                      }
+                    ]
+                  ]
+                },
+                margin: [0, 0, 0, 0],
+                layout: {
+                  hLineWidth: () => 0,
+                  vLineWidth: (i: number) => (i === 1 ? 2 : 0)
+                }
+              }
+            ],
+            [
+              { text: 'Transaction History', bold: true, margin: [4, 4, 4, 4] }
+            ],
+            [
+              {
+                table: {
+                  headerRows: 1,
+                  widths: ['auto', '*', 'auto', 'auto', 'auto'],
+                  body: [
+                    [
+                      { text: 'Date', bold: true, margin: [4, 4, 4, 4] },
+                      { text: 'Transaction Details', bold: true, margin: [4, 4, 4, 4] },
+                      { text: 'Debit (₹)', bold: true, alignment: 'right', margin: [4, 4, 4, 4] },
+                      { text: 'Credit (₹)', bold: true, alignment: 'right', margin: [4, 4, 4, 4] },
+                      { text: 'Balance (₹)', bold: true, alignment: 'right', margin: [4, 4, 4, 4] }
+                    ],
+                    ...(history || []).map((row: any) => [
+                      { text: new Date(row.date).toLocaleDateString('en-GB').replace(/\//g, '-'), fontSize: 10, margin: [4, 4, 4, 4] },
+                      { text: row.type, fontSize: 10, margin: [4, 4, 4, 4] },
+                      { text: row.debit ? row.debit.toFixed(2) : '-', fontSize: 10, alignment: 'right', margin: [4, 4, 4, 4] },
+                      { text: row.credit ? row.credit.toFixed(2) : '-', fontSize: 10, alignment: 'right', color: row.credit ? '#059669' : 'black', margin: [4, 4, 4, 4] },
+                      { text: row.balance.toFixed(2), fontSize: 10, alignment: 'right', bold: true, margin: [4, 4, 4, 4] }
+                    ])
+                  ]
+                },
+                layout: {
+                  hLineWidth: (i: number, node: any) => (i === 0 || i === node.table.body.length) ? 0 : 1,
+                  vLineWidth: (i: number, node: any) => (i === 0 || i === node.table.widths.length) ? 0 : 1,
+                  hLineColor: () => '#000000',
+                  vLineColor: () => '#000000'
+                },
+                margin: [0, 0, 0, 0]
+              }
+            ],
+            [
+              {
+                table: {
+                  widths: ['*', 250],
+                  body: [
+                    [
+                      {
+                        text: [
+                          { text: 'Note:\n', bold: true },
+                          `1. Statement generated on ${new Date().toLocaleDateString('en-GB').replace(/\//g, '-')}\n`,
+                          `2. Subject to jurisdiction : Palghar`
+                        ],
+                        fontSize: 10,
+                        margin: [4, 4, 4, 4],
+                        border: [false, false, true, false]
+                      },
+                      {
+                        stack: [
+                          { text: 'For Anand Enterprises\n', bold: true, alignment: 'right' },
+                          signatureBase64 ? { image: signatureBase64, width: 75, alignment: 'right', margin: [0, 2, 0, 2] } : { text: '\n\n', alignment: 'right' },
+                          { text: 'Authorised Signatory', bold: true, alignment: 'right' }
+                        ],
+                        fontSize: 10,
+                        margin: [4, 4, 4, 4],
+                        border: [false, false, false, false]
+                      }
+                    ]
+                  ]
+                },
+                margin: [0, 0, 0, 0],
+                layout: {
+                  hLineWidth: () => 0,
+                  vLineWidth: (i: number) => (i === 1 ? 2 : 0)
+                }
+              }
+            ]
           ]
+        },
+        layout: {
+          hLineWidth: () => 2,
+          vLineWidth: () => 2,
+          hLineColor: () => '#000000',
+          vLineColor: () => '#000000'
         }
       }
     ],
-    styles: {
-      header: { fontSize: 18, bold: true }
+    defaultStyle: {
+      fontSize: 10,
+      color: '#000000'
     }
   };
 

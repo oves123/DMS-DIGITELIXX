@@ -447,7 +447,7 @@ router.get('/payment/distributor/:distributor_id/download', async (c) => {
         }
 
         c.header('Content-Type', 'application/pdf');
-        c.header('Content-Disposition', `attachment; filename="Ledger_${user.firm_name.replace(/[^a-z0-9]/gi, '_')}.pdf"`);
+        c.header('Content-Disposition', `attachment; filename="Ledger_${(user?.firm_name || 'Unknown').replace(/[^a-z0-9]/gi, '_')}.pdf"`);
         return c.body(file.body as any);
 
     } catch (err) {
