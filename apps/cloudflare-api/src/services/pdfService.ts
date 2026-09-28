@@ -704,7 +704,15 @@ export const generateCreditNotePdf = async (creditNoteData: any, distributorDeta
                       { text: 'Defective Pcs', alignment: 'center', bold: true },
                       { text: 'Amount', alignment: 'right', bold: true }
                     ],
-                    ...safeItems.map((item: any, idx: number) => {
+                    ...(safeItems.length > 0 ? safeItems : [{
+                      product_name: 'General Credit',
+                      pack_size: '-',
+                      reason: credit_note.reason || '-',
+                      quantity: '-',
+                      pieces_qty: '-',
+                      item_total: parseFloat(credit_note.total_amount) || 0,
+                      gst_percent: 0
+                    }]).map((item: any, idx: number) => {
                       const taxableAmt = item.item_total || 0;
                       const gstPct = parseFloat(item.gst_percent) || 0;
                       const cgstAmt = taxableAmt * ((gstPct / 2) / 100);

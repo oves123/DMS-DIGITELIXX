@@ -408,7 +408,9 @@ const AdminClaims = () => {
                                       </tr>
                                     ))}
                                     {expandedRowItems[cn.credit_note_id]?.length === 0 && (
-                                      <tr><td colSpan={6} style={{ padding: '16px 0', textAlign: 'center', color: '#94a3b8' }}>No item details found.</td></tr>
+                                      <tr><td colSpan={6} style={{ padding: '16px 0', textAlign: 'center', color: '#64748b' }}>
+                                        <strong>General Credit Note:</strong> {cn.reason || 'No specific reason provided.'}
+                                      </td></tr>
                                     )}
                                   </tbody>
                                 </table>
