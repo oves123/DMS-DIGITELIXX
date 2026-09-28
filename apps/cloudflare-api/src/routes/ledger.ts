@@ -335,6 +335,7 @@ router.get('/payment/distributor/:distributor_id', async (c) => {
                     invoice_number: inv.invoice_number,
                     grand_total: inv.grand_total,
                     paid_amount: inv.paid_amount,
+                    credit_applied: inv.credit_applied,
                     created_at: inv.created_at,
                     order_id: order?.sql_order_id || inv.order_id
                 });

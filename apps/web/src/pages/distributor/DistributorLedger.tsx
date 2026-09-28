@@ -81,8 +81,18 @@ const DistributorLedger = () => {
                     </td>
                     <td>{new Date(inv.created_at).toLocaleDateString()}</td>
                     <td style={{ fontWeight: 600 }}>₹{inv.grand_total}</td>
-                    <td style={{ color: '#166534' }}>₹{inv.paid_amount || 0}</td>
-                    <td style={{ fontWeight: 600, color: '#b91c1c' }}>₹{(inv.grand_total - (inv.paid_amount || 0)).toFixed(2)}</td>
+                    <td 
+                        style={{ color: '#166534', cursor: inv.credit_applied > 0 ? 'help' : 'default' }}
+                        title={inv.credit_applied > 0 ? `Wallet Balance Applied: ₹${Number(inv.credit_applied).toFixed(2)}` : undefined}
+                    >
+                        ₹{inv.paid_amount || 0}
+                    </td>
+                    <td 
+                        style={{ fontWeight: 600, color: '#b91c1c', cursor: inv.credit_applied > 0 ? 'help' : 'default' }}
+                        title={inv.credit_applied > 0 ? `Invoice: ₹${Number(inv.grand_total).toFixed(2)} - Wallet Paid: ₹${Number(inv.credit_applied).toFixed(2)} = Pending: ₹${(Number(inv.grand_total) - Number(inv.paid_amount || 0)).toFixed(2)}` : undefined}
+                    >
+                        ₹{(inv.grand_total - (inv.paid_amount || 0)).toFixed(2)}
+                    </td>
                   </tr>
                 ))}
               </tbody>

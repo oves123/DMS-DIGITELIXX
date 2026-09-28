@@ -26,6 +26,7 @@ const AdminOrders = () => {
   const [extraDiscount, setExtraDiscount, clearExtraDiscount] = useAutoSave<number>('admin_orders_extra_discount', 0);
   const [discountType, setDiscountType, clearDiscountType] = useAutoSave<'amount' | 'percent'>('admin_orders_discount_type', 'amount');
   const [discountReason, setDiscountReason, clearDiscountReason] = useAutoSave<string>('admin_orders_discount_reason', '');
+  const [applyWallet, setApplyWallet, clearApplyWallet] = useAutoSave<boolean>('admin_orders_apply_wallet', false);
   const [creditApplied, setCreditApplied, clearCreditApplied] = useAutoSave<number>('admin_orders_credit_applied', 0);
 
   // Prevent navigation when processing
@@ -51,11 +52,18 @@ const AdminOrders = () => {
           orderTotal += itemSubtotal + (itemSubtotal * (gstPct / 2 / 100)) + (itemSubtotal * (gstPct / 2 / 100));
         });
         
+        const discountAmount = discountType === 'percent' ? orderTotal * (extraDiscount / 100) : extraDiscount;
+        const finalPayable = Math.max(0, orderTotal - discountAmount);
+        
         const wb = parseFloat(order.wallet_balance || 0);
-        setCreditApplied(Math.min(wb, orderTotal));
+        if (applyWallet) {
+          setCreditApplied(Math.min(wb, finalPayable));
+        } else {
+          setCreditApplied(0);
+        }
       }
     }
-  }, [executingOrderId, executionQuantities, orders]);
+  }, [executingOrderId, executionQuantities, orders, applyWallet, extraDiscount, discountType]);
 
   const fetchOrders = async () => {
     try {
@@ -99,6 +107,7 @@ const AdminOrders = () => {
       clearExtraDiscount();
       clearDiscountType();
       clearDiscountReason();
+      clearApplyWallet();
       clearCreditApplied();
       clearExecutionQuantities();
       fetchOrders();
@@ -450,8 +459,14 @@ const AdminOrders = () => {
                         <h4 style={{ margin: '0 0 12px 0', color: '#0f172a' }}>Billing Adjustments</h4>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: '16px', alignItems: 'end' }}>
                           <div>
-                            <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
-                               Advance Payment Auto-Applied
+                            <label style={{ display: 'flex', alignItems: 'center', fontSize: '12px', color: '#64748b', marginBottom: '4px', cursor: 'pointer' }}>
+                               <input 
+                                 type="checkbox" 
+                                 checked={applyWallet} 
+                                 onChange={e => setApplyWallet(e.target.checked)}
+                                 style={{ marginRight: '6px' }} 
+                               />
+                               Apply Wallet Balance
                             </label>
                             <input 
                               type="number" 
@@ -501,14 +516,22 @@ const AdminOrders = () => {
                         <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px dashed #cbd5e1', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '16px' }}>
                           <div style={{ fontSize: '14px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Final Payable:</div>
                           <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>
-                            {(creditApplied > 0 || extraDiscount > 0) && (
+                            {(extraDiscount > 0) && (
                               <span style={{ textDecoration: 'line-through', color: '#9ca3af', fontSize: '16px', marginRight: '12px' }}>
                                 ₹{Math.round(totalAmount)}
                               </span>
                             )}
-                            ₹{Math.round(Math.max(0, totalAmount - (creditApplied || 0) - (discountType === 'percent' ? totalAmount * (extraDiscount / 100) : extraDiscount)))}
+                            ₹{Math.round(Math.max(0, totalAmount - (discountType === 'percent' ? totalAmount * (extraDiscount / 100) : extraDiscount)))}
                           </div>
                         </div>
+                        {creditApplied > 0 && (
+                          <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '16px' }}>
+                            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Wallet Balance Applied (Payment):</div>
+                            <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#3b82f6' }}>
+                              ₹{Math.round(creditApplied)}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ) : null}
                     
@@ -519,6 +542,7 @@ const AdminOrders = () => {
                             clearExecutingOrderId();
                             clearExtraDiscount();
                             clearDiscountReason();
+                            clearApplyWallet();
                             clearCreditApplied();
                             clearExecutionQuantities();
                           }} style={{ marginRight: '10px' }} disabled={isProcessing}>Cancel</button>
@@ -550,8 +574,10 @@ const AdminOrders = () => {
                           });
                           setExecutionQuantities(defaultQts);
                           
+                          const discountAmount = discountType === 'percent' ? orderTotal * (extraDiscount / 100) : extraDiscount;
+                          const finalPayable = Math.max(0, orderTotal - discountAmount);
                           const wb = parseFloat(order.wallet_balance || 0);
-                          setCreditApplied(Math.min(wb, orderTotal));
+                          setCreditApplied(applyWallet ? Math.min(wb, finalPayable) : 0);
                         }}>Process Order</button>
                         </>
                       )}

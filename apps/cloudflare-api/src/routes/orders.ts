@@ -309,9 +309,24 @@ router.put('/:id/execute', async (c) => {
         await db.update(schema.orders).set({ status: 'EXECUTED', execution_date: new Date() }).where(eq(schema.orders.id, order.id));
 
         let grand_total = subtotal + cgst + sgst;
-        grand_total = grand_total - credit_applied - extra_discount;
+        grand_total = grand_total - extra_discount;
         if (grand_total < 0) grand_total = 0;
         grand_total = Math.round(grand_total);
+        
+        let payment_status = 'UNPAID';
+        let paid_amount = credit_applied;
+        
+        // Backend safeguard: never apply more than the available wallet balance
+        if (user && paid_amount > (user.wallet_balance || 0)) {
+            paid_amount = user.wallet_balance || 0;
+        }
+        
+        if (paid_amount >= grand_total && grand_total > 0) {
+            payment_status = 'PAID';
+            paid_amount = grand_total;
+        } else if (paid_amount > 0) {
+            payment_status = 'PARTIAL';
+        }
 
         const now = new Date();
         const month = now.getMonth();
@@ -347,12 +362,22 @@ router.put('/:id/execute', async (c) => {
             credit_applied,
             extra_discount,
             discount_reason,
-            payment_status: 'UNPAID',
+            paid_amount,
+            payment_status,
             created_at: new Date()
         });
 
-        if (credit_applied > 0 && user) {
-            await db.update(schema.users).set({ wallet_balance: (user.wallet_balance || 0) - credit_applied }).where(eq(schema.users.id, user.id));
+        if (paid_amount > 0 && user) {
+            await db.insert(schema.payments).values({
+                id: crypto.randomUUID(),
+                invoice_id: invoiceId,
+                distributor_id: user.id,
+                amount: paid_amount,
+                payment_mode: 'Wallet',
+                reference_number: 'Wallet Credit Applied',
+                payment_date: new Date()
+            });
+            await db.update(schema.users).set({ wallet_balance: (user.wallet_balance || 0) - paid_amount }).where(eq(schema.users.id, user.id));
         }
 
         c.executionCtx.waitUntil(
@@ -503,9 +528,18 @@ router.post('/:id/draft-pdf', async (c) => {
         }
 
         let grand_total = subtotal + cgst + sgst;
-        grand_total = grand_total - credit_applied - extra_discount;
+        grand_total = grand_total - extra_discount;
         if (grand_total < 0) grand_total = 0;
         grand_total = Math.round(grand_total);
+        
+        let payment_status = 'UNPAID';
+        let paid_amount = credit_applied;
+        if (paid_amount >= grand_total && grand_total > 0) {
+            payment_status = 'PAID';
+            paid_amount = grand_total;
+        } else if (paid_amount > 0) {
+            payment_status = 'PARTIAL';
+        }
         
         const invoice = {
             firm_name: user?.firm_name,
@@ -518,7 +552,9 @@ router.post('/:id/draft-pdf', async (c) => {
             cgst_amount: cgst,
             sgst_amount: sgst,
             grand_total,
-            extra_discount
+            extra_discount,
+            paid_amount,
+            payment_status
         };
 
         const pdfUrl = await generateInvoicePdf({ invoice, items: invoiceItems }, settings, c.env.MY_BUCKET as any);

@@ -391,8 +391,18 @@ const AdminLedger = () => {
                               </span>
                             </td>
                             <td style={{ padding: '10px 12px', fontWeight: 500 }}>₹{Number(inv.grand_total).toFixed(2)}</td>
-                            <td style={{ padding: '10px 12px', color: '#059669' }}>₹{Number(inv.paid_amount || 0).toFixed(2)}</td>
-                            <td style={{ padding: '10px 12px', color: '#dc2626' }}>₹{(Number(inv.grand_total) - Number(inv.paid_amount || 0)).toFixed(2)}</td>
+                            <td 
+                               style={{ padding: '10px 12px', color: '#059669', cursor: inv.credit_applied > 0 ? 'help' : 'default' }}
+                               title={inv.credit_applied > 0 ? `Wallet Balance Applied: ₹${Number(inv.credit_applied).toFixed(2)}` : undefined}
+                            >
+                               ₹{Number(inv.paid_amount || 0).toFixed(2)}
+                            </td>
+                            <td 
+                               style={{ padding: '10px 12px', color: '#dc2626', cursor: inv.credit_applied > 0 ? 'help' : 'default' }}
+                               title={inv.credit_applied > 0 ? `Invoice: ₹${Number(inv.grand_total).toFixed(2)} - Wallet Paid: ₹${Number(inv.credit_applied).toFixed(2)} = Pending: ₹${(Number(inv.grand_total) - Number(inv.paid_amount || 0)).toFixed(2)}` : undefined}
+                            >
+                               ₹{(Number(inv.grand_total) - Number(inv.paid_amount || 0)).toFixed(2)}
+                            </td>
                           </tr>
                         ))}
                       </Fragment>
