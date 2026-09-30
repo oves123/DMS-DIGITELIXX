@@ -519,12 +519,37 @@ router.get('/credit-note-stats', async (c) => {
         let totalIssued = 0;
         cns.forEach(cn => totalIssued += (cn.total_amount || 0));
         
-        // This is simplified, can be expanded if needed
+        const reasonCounts: Record<string, number> = {};
+        
+        cnItems.forEach(item => {
+            if (item.reason && item.reason.trim() !== '') {
+                const r = item.reason.trim();
+                reasonCounts[r] = (reasonCounts[r] || 0) + 1;
+            }
+        });
+        
+        cns.forEach(cn => {
+            if (cn.reason && cn.reason.trim() !== '') {
+                const r = cn.reason.trim();
+                reasonCounts[r] = (reasonCounts[r] || 0) + 1;
+            }
+        });
+
+        let topReason = 'N/A';
+        let maxCount = 0;
+        for (const [reason, count] of Object.entries(reasonCounts)) {
+            if (count > maxCount) {
+                maxCount = count;
+                topReason = reason;
+            }
+        }
+
         return c.json({
             total_issued: totalIssued,
             total_refunded_cash: 0,
             total_wallet_credit: totalIssued,
-            common_defect_reason: 'N/A'
+            topReason: topReason,
+            common_defect_reason: topReason
         });
     } catch (err) {
         console.error(err);
