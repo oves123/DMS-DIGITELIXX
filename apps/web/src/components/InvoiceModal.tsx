@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
-import { X, Printer, IndianRupee, Download } from 'lucide-react';
+import { X, Printer, IndianRupee, Download, FileSpreadsheet } from 'lucide-react';
 import { signatureBase64 } from '../assets/signatureBase64';
 import RecordPaymentModal from './RecordPaymentModal';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import * as XLSX from 'xlsx';
 
 interface InvoiceModalProps {
   orderId: number;
@@ -184,6 +185,110 @@ const InvoiceModal = ({ orderId, onClose }: InvoiceModalProps) => {
     }
   };
 
+  const handleDownloadExcel = () => {
+    try {
+      const wsData: any[][] = [];
+      
+      wsData.push(['TAX INVOICE']);
+      wsData.push([]);
+      wsData.push(['Company Details', '', '', '', 'Bill To', '', 'Ship To']);
+      wsData.push([
+        'Anand Enterprises', '', '', '',
+        data.invoice.firm_name, '',
+        data.invoice.firm_name
+      ]);
+      wsData.push([
+        `Address : ${settings?.address || ''}`, '', '', '',
+        `Address: ${data.invoice.address}`, '',
+        `Address: ${data.invoice.address}`
+      ]);
+      wsData.push([
+        `Mobile No. : ${settings?.mobile_number || ''} , State : ${settings?.state || ''}`, '', '', '',
+        data.invoice.gst_number ? `GST No : ${data.invoice.gst_number}` : '', '',
+        data.invoice.gst_number ? `GST No : ${data.invoice.gst_number}` : ''
+      ]);
+      wsData.push([
+        `GST No : ${settings?.gst_number || ''} , FSSAI No : ${settings?.fssai_number || ''}`, '', '', '',
+        `Place Of Supply: Maharashtra ${data.invoice.fssai_number ? `, FSSAI No : ${data.invoice.fssai_number}` : ''}`, '',
+        `Place Of Supply: Maharashtra ${data.invoice.fssai_number ? `, FSSAI No : ${data.invoice.fssai_number}` : ''}`
+      ]);
+      wsData.push([]);
+      wsData.push(['BILL NO.', data.invoice.invoice_number, '', '', 'Date', new Date(data.invoice.created_at).toLocaleDateString('en-GB').split('/').join('-')]);
+      wsData.push([]);
+      
+      wsData.push([
+        '#', 'HSN', 'Item Name', 'UOM', 'Qty', 'Rate', 
+        'CGST %', 'CGST Amt', 'SGST %', 'SGST Amt', 'Taxable Amt', 'Amount'
+      ]);
+      
+      let totalQty = 0;
+      let totalCgst = 0;
+      let totalSgst = 0;
+      let totalTaxable = 0;
+      let totalAmount = 0;
+      
+      sortItemsByCategory(data.items).forEach((item: any, idx: number) => {
+        const taxableAmt = item.executed_qty * item.price_at_order;
+        const gstPct = parseFloat(item.gst_percent) || 0;
+        const cgstRate = gstPct / 2;
+        const sgstRate = gstPct / 2;
+        const cgstAmt = taxableAmt * (cgstRate / 100);
+        const sgstAmt = taxableAmt * (sgstRate / 100);
+        const rowTotal = taxableAmt + cgstAmt + sgstAmt;
+        
+        totalQty += item.executed_qty;
+        totalCgst += cgstAmt;
+        totalSgst += sgstAmt;
+        totalTaxable += taxableAmt;
+        totalAmount += rowTotal;
+        
+        wsData.push([
+          idx + 1,
+          item.hsn_code || '-',
+          `${item.product_name} - ${formatPackSize(item.pack_size)}`,
+          item.uom || 'Box',
+          item.executed_qty,
+          item.price_at_order,
+          `${cgstRate}%`,
+          Number(cgstAmt.toFixed(2)),
+          `${sgstRate}%`,
+          Number(sgstAmt.toFixed(2)),
+          Number(taxableAmt.toFixed(2)),
+          Number(Math.round(rowTotal).toFixed(2))
+        ]);
+      });
+      
+      wsData.push([
+        'TOTAL', '', '', '', 
+        totalQty, '', '', 
+        Number(totalCgst.toFixed(2)), '', 
+        Number(totalSgst.toFixed(2)), 
+        Number((data.invoice.subtotal || totalTaxable).toFixed(2)), 
+        Number(Math.round(totalAmount).toFixed(2))
+      ]);
+      
+      if (data.invoice.extra_discount > 0) {
+        wsData.push(['', '', '', '', '', '', '', '', '', '', 'Extra Discount', -Number((data.invoice.extra_discount || 0).toFixed(2))]);
+      }
+      if (data.invoice.credit_applied > 0) {
+        wsData.push(['', '', '', '', '', '', '', '', '', '', 'Wallet Credit Applied', -Number((data.invoice.credit_applied || 0).toFixed(2))]);
+      }
+      if (data.invoice.extra_discount > 0 || data.invoice.credit_applied > 0) {
+        const finalPayable = Math.round(totalAmount - (data.invoice.extra_discount || 0) - (data.invoice.credit_applied || 0));
+        wsData.push(['', '', '', '', '', '', '', '', '', '', 'FINAL PAYABLE AMOUNT', finalPayable]);
+      }
+      
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Invoice');
+      
+      XLSX.writeFile(wb, `Invoice_${data.invoice.invoice_number}.xlsx`);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to generate Excel file.');
+    }
+  };
+
   return (
     <div className="modal-overlay" style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -205,6 +310,9 @@ const InvoiceModal = ({ orderId, onClose }: InvoiceModalProps) => {
             )}
             <button onClick={handleDownloadPdf} disabled={downloading} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: '#fef3c7', color: '#92400e', border: 'none', borderRadius: '6px', cursor: downloading ? 'not-allowed' : 'pointer', fontWeight: 500 }}>
               <Download size={16} /> {downloading ? 'Generating...' : 'Download PDF'}
+            </button>
+            <button onClick={handleDownloadExcel} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}>
+              <FileSpreadsheet size={16} /> Download Excel
             </button>
             <button onClick={handlePrint} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: '#eff6ff', color: 'var(--primary)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}>
               <Printer size={16} /> Print
