@@ -20,7 +20,6 @@ const BulkOrderForm = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showPreviewModal, setShowPreviewModal] = useState(false);
-  const [applyWallet, setApplyWallet] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
   const user = JSON.parse(localStorage.getItem('dms_user') || '{}');
 
@@ -138,7 +137,7 @@ const BulkOrderForm = () => {
       await api.post('/api/orders', {
         distributor_id: user.user_id,
         items,
-        apply_wallet: applyWallet ? 1 : 0
+        apply_wallet: 1
       });
       
       showToast('Order placed successfully!', 'success');
@@ -329,12 +328,12 @@ const BulkOrderForm = () => {
           <div>
             <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Grand Total Value</div>
             <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>
-              {applyWallet && walletBalance > 0 && (
+              {walletBalance > 0 && (
                 <span style={{ textDecoration: 'line-through', color: '#9ca3af', fontSize: '16px', marginRight: '8px' }}>
                   ₹{grandTotalValue.toFixed(2)}
                 </span>
               )}
-              ₹{(applyWallet ? Math.max(0, grandTotalValue - walletBalance) : grandTotalValue).toFixed(2)}
+              ₹{Math.max(0, grandTotalValue - walletBalance).toFixed(2)}
             </div>
           </div>
         </div>
@@ -448,12 +447,12 @@ const BulkOrderForm = () => {
                 <div>
                   <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Grand Total</div>
                   <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>
-                    {applyWallet && walletBalance > 0 && (
+                    {walletBalance > 0 && (
                       <span style={{ textDecoration: 'line-through', color: '#9ca3af', fontSize: '16px', marginRight: '8px' }}>
                         ₹{grandTotalValue.toFixed(2)}
                       </span>
                     )}
-                    ₹{(applyWallet ? Math.max(0, grandTotalValue - walletBalance) : grandTotalValue).toFixed(2)}
+                    ₹{Math.max(0, grandTotalValue - walletBalance).toFixed(2)}
                   </div>
                 </div>
               </div>
@@ -461,16 +460,9 @@ const BulkOrderForm = () => {
               <div className="modal-footer-actions">
                 {walletBalance > 0 && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#ecfdf5', padding: '8px 16px', borderRadius: '8px', border: '1px solid #10b981' }}>
-                    <input 
-                      type="checkbox" 
-                      id="applyWallet"
-                      checked={applyWallet}
-                      onChange={e => setApplyWallet(e.target.checked)}
-                      style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#10b981' }}
-                    />
-                    <label htmlFor="applyWallet" style={{ cursor: 'pointer', fontSize: '14px', color: '#065f46', fontWeight: 600 }}>
-                      Apply Wallet Balance (₹{parseFloat(walletBalance.toString()).toFixed(2)})
-                    </label>
+                    <div style={{ fontSize: '14px', color: '#065f46', fontWeight: 600 }}>
+                      Wallet Balance Auto-Applied (₹{parseFloat(walletBalance.toString()).toFixed(2)})
+                    </div>
                   </div>
                 )}
                 

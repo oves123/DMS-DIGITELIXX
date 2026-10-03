@@ -26,7 +26,6 @@ const AdminOrders = () => {
   const [extraDiscount, setExtraDiscount, clearExtraDiscount] = useAutoSave<number>('admin_orders_extra_discount', 0);
   const [discountType, setDiscountType, clearDiscountType] = useAutoSave<'amount' | 'percent'>('admin_orders_discount_type', 'amount');
   const [discountReason, setDiscountReason, clearDiscountReason] = useAutoSave<string>('admin_orders_discount_reason', '');
-  const [applyWallet, setApplyWallet, clearApplyWallet] = useAutoSave<boolean>('admin_orders_apply_wallet', false);
   const [creditApplied, setCreditApplied, clearCreditApplied] = useAutoSave<number>('admin_orders_credit_applied', 0);
 
   // Prevent navigation when processing
@@ -56,14 +55,10 @@ const AdminOrders = () => {
         const finalPayable = Math.max(0, orderTotal - discountAmount);
         
         const wb = parseFloat(order.wallet_balance || 0);
-        if (applyWallet) {
-          setCreditApplied(Math.min(wb, finalPayable));
-        } else {
-          setCreditApplied(0);
-        }
+        setCreditApplied(Math.min(wb, finalPayable));
       }
     }
-  }, [executingOrderId, executionQuantities, orders, applyWallet, extraDiscount, discountType]);
+  }, [executingOrderId, executionQuantities, orders, extraDiscount, discountType]);
 
   const fetchOrders = async () => {
     try {
@@ -107,7 +102,6 @@ const AdminOrders = () => {
       clearExtraDiscount();
       clearDiscountType();
       clearDiscountReason();
-      clearApplyWallet();
       clearCreditApplied();
       clearExecutionQuantities();
       fetchOrders();
@@ -459,14 +453,8 @@ const AdminOrders = () => {
                         <h4 style={{ margin: '0 0 12px 0', color: '#0f172a' }}>Billing Adjustments</h4>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: '16px', alignItems: 'end' }}>
                           <div>
-                            <label style={{ display: 'flex', alignItems: 'center', fontSize: '12px', color: '#64748b', marginBottom: '4px', cursor: 'pointer' }}>
-                               <input 
-                                 type="checkbox" 
-                                 checked={applyWallet} 
-                                 onChange={e => setApplyWallet(e.target.checked)}
-                                 style={{ marginRight: '6px' }} 
-                               />
-                               Apply Wallet Balance
+                            <label style={{ display: 'flex', alignItems: 'center', fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
+                               Wallet Balance Applied
                             </label>
                             <input 
                               type="number" 
