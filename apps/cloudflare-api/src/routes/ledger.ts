@@ -708,7 +708,21 @@ router.post('/credit-note', async (c) => {
             await db.update(schema.users).set({ wallet_balance: (user.wallet_balance || 0) + body.total_amount }).where(eq(schema.users.id, user.id));
         }
         
-        return c.json({ message: 'Credit note created successfully' }, 201);
+        return c.json({ 
+            message: 'Credit note created successfully',
+            credit_note: {
+                id: cnId,
+                distributor_id: user.id,
+                cn_number: creditNoteNumber,
+                total_amount: body.total_amount,
+                reason: body.reason,
+                created_at: new Date(),
+                is_direct_amount: body.is_direct_amount,
+                is_paid_out: body.is_paid_out,
+                payment_mode: body.payment_mode
+            },
+            items: body.items || []
+        }, 201);
     } catch (err) {
         console.error(err);
         return c.json({ message: 'Server Error' }, 500);
