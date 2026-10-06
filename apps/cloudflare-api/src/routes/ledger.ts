@@ -614,17 +614,26 @@ router.get('/credit-note/:cn_id/items', async (c) => {
         }
         
         const formattedItems = items.map(i => {
-            let pName = 'Unknown Product';
+            let pName = 'Direct Credit / Subsidy';
+            let pSize = '-';
             if (i.variant_id) {
                 const v = variants.find(v => v.id === i.variant_id);
                 if (v) {
                     const p = products.find(p => p.id === v.product_id);
-                    if (p) pName = p.name + ' (' + v.pack_size + ')';
+                    if (p) {
+                        pName = p.name;
+                    } else {
+                        pName = 'Unknown Product';
+                    }
+                    pSize = v.pack_size;
+                } else {
+                    pName = 'Unknown Product';
                 }
             }
             return {
                 id: i.sql_cn_item_id || i.id,
                 product_name: pName,
+                pack_size: pSize,
                 quantity: i.quantity,
                 pieces_qty: i.pieces_qty,
                 reason: i.reason,
@@ -761,13 +770,16 @@ router.get('/credit-note/:cn_id/download', async (c) => {
                         (item as any).product_name = `${product.name} (${variant.pack_size})`;
                         (item as any).gst_percent = product.gst_percent;
                     } else {
-                        (item as any).product_name = item.reason || 'Unknown Product';
+                        (item as any).product_name = 'Unknown Product';
+                        (item as any).pack_size = '-';
                     }
                 } else {
-                    (item as any).product_name = item.reason || 'Unknown Product';
+                    (item as any).product_name = 'Unknown Product';
+                    (item as any).pack_size = '-';
                 }
             } else {
-                (item as any).product_name = item.reason || 'Unknown Product';
+                (item as any).product_name = 'Direct Credit / Subsidy';
+                (item as any).pack_size = '-';
             }
         }
 

@@ -54,7 +54,7 @@ const CreditNoteModal: React.FC<CreditNoteModalProps> = ({ distributor, onClose,
   const [selectedItems, setSelectedItems] = useState<any>({});
   
   // Direct mode state
-  const [directItems, setDirectItems] = useState([{ amount: '', reason: 'Subsidy / Direct Credit' }]);
+  const [directItems, setDirectItems] = useState([{ amount: '', reason: 'Subsidy / Direct Credit', box: '', pcs: '' }]);
   
   const [isPaidOut, setIsPaidOut] = useState(false);
   const [paymentMode, setPaymentMode] = useState('Cash');
@@ -162,14 +162,16 @@ const CreditNoteModal: React.FC<CreditNoteModalProps> = ({ distributor, onClose,
     if (mode === 'direct') {
         const itemsPayload = directItems.map(item => {
             const amt = parseFloat(item.amount);
+            const box = parseInt(item.box as any) || 0;
+            const pcs = parseInt(item.pcs as any) || 0;
             return {
                 variant_id: null,
-                quantity: 1,
-                pieces_qty: 0,
+                quantity: box,
+                pieces_qty: pcs,
                 reason: isPaidOut ? `[CASH REFUND] ${item.reason}` : item.reason,
                 price_at_order: amt,
                 item_total: amt,
-                total_qty: 1,
+                total_qty: box,
                 product_name: 'Direct Credit / Subsidy',
                 pack_size: '-',
                 hsn_code: '-',
@@ -327,6 +329,8 @@ const CreditNoteModal: React.FC<CreditNoteModalProps> = ({ distributor, onClose,
                 <thead>
                   <tr style={{ background: '#f1f5f9', borderBottom: '1px solid #cbd5e1' }}>
                     <th style={{ padding: '8px', textAlign: 'left' }}>Reason / Details</th>
+                    <th style={{ padding: '8px', textAlign: 'center' }}>Defective Box</th>
+                    <th style={{ padding: '8px', textAlign: 'center' }}>Defective Pcs</th>
                     <th style={{ padding: '8px', textAlign: 'right' }}>Amount</th>
                   </tr>
                 </thead>
@@ -334,6 +338,8 @@ const CreditNoteModal: React.FC<CreditNoteModalProps> = ({ distributor, onClose,
                   {items.map((item: any, idx: number) => (
                     <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
                       <td style={{ padding: '8px' }}>{item.reason}</td>
+                      <td style={{ padding: '8px', textAlign: 'center' }}>{item.quantity || 0}</td>
+                      <td style={{ padding: '8px', textAlign: 'center' }}>{item.pieces_qty || 0}</td>
                       <td style={{ padding: '8px', textAlign: 'right' }}>₹{parseFloat(item.item_total || 0).toFixed(2)}</td>
                     </tr>
                   ))}
@@ -526,7 +532,7 @@ const CreditNoteModal: React.FC<CreditNoteModalProps> = ({ distributor, onClose,
             ) : (
                 <div style={{ marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     {directItems.map((item, idx) => (
-                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr auto', gap: '12px', alignItems: 'end' }}>
+                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1.5fr 2fr 1fr 1fr auto', gap: '12px', alignItems: 'end' }}>
                             <div>
                                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Amount (₹) *</label>
                                 <input 
@@ -555,8 +561,38 @@ const CreditNoteModal: React.FC<CreditNoteModalProps> = ({ distributor, onClose,
                                         setDirectItems(newItems);
                                     }}
                                     style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
-                                    placeholder="e.g. Company Subsidy"
+                                    placeholder="e.g. Subsidy"
                                     required
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, fontSize: '13px' }}>Defective Box (Opt.)</label>
+                                <input 
+                                    type="number" 
+                                    min="0"
+                                    value={item.box}
+                                    onChange={(e) => {
+                                        const newItems = [...directItems];
+                                        newItems[idx].box = e.target.value;
+                                        setDirectItems(newItems);
+                                    }}
+                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                    placeholder="0"
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, fontSize: '13px' }}>Defective Pcs (Opt.)</label>
+                                <input 
+                                    type="number" 
+                                    min="0"
+                                    value={item.pcs}
+                                    onChange={(e) => {
+                                        const newItems = [...directItems];
+                                        newItems[idx].pcs = e.target.value;
+                                        setDirectItems(newItems);
+                                    }}
+                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                    placeholder="0"
                                 />
                             </div>
                             <div style={{ paddingBottom: '4px' }}>
@@ -584,7 +620,7 @@ const CreditNoteModal: React.FC<CreditNoteModalProps> = ({ distributor, onClose,
                     <div style={{ marginTop: '4px' }}>
                         <button 
                             type="button"
-                            onClick={() => setDirectItems([...directItems, { amount: '', reason: '' }])}
+                            onClick={() => setDirectItems([...directItems, { amount: '', reason: '', box: '', pcs: '' }])}
                             style={{ 
                                 display: 'inline-flex', alignItems: 'center', gap: '6px', 
                                 padding: '8px 16px', background: '#f1f5f9', color: '#3b82f6', 
