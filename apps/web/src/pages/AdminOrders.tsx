@@ -530,7 +530,6 @@ const AdminOrders = () => {
                             clearExecutingOrderId();
                             clearExtraDiscount();
                             clearDiscountReason();
-                            clearApplyWallet();
                             clearCreditApplied();
                             clearExecutionQuantities();
                           }} style={{ marginRight: '10px' }} disabled={isProcessing}>Cancel</button>
@@ -565,7 +564,7 @@ const AdminOrders = () => {
                           const discountAmount = discountType === 'percent' ? orderTotal * (extraDiscount / 100) : extraDiscount;
                           const finalPayable = Math.max(0, orderTotal - discountAmount);
                           const wb = parseFloat(order.wallet_balance || 0);
-                          setCreditApplied(applyWallet ? Math.min(wb, finalPayable) : 0);
+                          setCreditApplied(Math.min(wb, finalPayable));
                         }}>Process Order</button>
                         </>
                       )}
