@@ -270,13 +270,6 @@ const InvoiceModal = ({ orderId, onClose }: InvoiceModalProps) => {
       if (data.invoice.extra_discount > 0) {
         wsData.push(['', '', '', '', '', '', '', '', '', '', 'Extra Discount', -Number((data.invoice.extra_discount || 0).toFixed(2))]);
       }
-      if (data.invoice.credit_applied > 0) {
-        wsData.push(['', '', '', '', '', '', '', '', '', '', 'Wallet Credit Applied', -Number((data.invoice.credit_applied || 0).toFixed(2))]);
-      }
-      if (data.invoice.extra_discount > 0 || data.invoice.credit_applied > 0) {
-        const finalPayable = Math.round(totalAmount - (data.invoice.extra_discount || 0) - (data.invoice.credit_applied || 0));
-        wsData.push(['', '', '', '', '', '', '', '', '', '', 'FINAL PAYABLE AMOUNT', finalPayable]);
-      }
       
       const ws = XLSX.utils.aoa_to_sheet(wsData);
       const wb = XLSX.utils.book_new();
@@ -480,41 +473,15 @@ const InvoiceModal = ({ orderId, onClose }: InvoiceModalProps) => {
                       }, 0)).toFixed(2)}
                     </td>
                   </tr>
-                  {(data.invoice.extra_discount > 0 || data.invoice.credit_applied > 0) && (
-                    <>
-                      {data.invoice.extra_discount > 0 && (
-                        <tr>
-                          <td colSpan={11} style={{ border: '1px solid #000', padding: '4px', textAlign: 'right', fontWeight: 'bold' }}>
-                            Extra Discount {data.invoice.discount_reason ? `(${data.invoice.discount_reason})` : ''}
-                          </td>
-                          <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'right', fontWeight: 'bold', color: '#16a34a' }}>
-                            -{(data.invoice.extra_discount || 0).toFixed(2)}
-                          </td>
-                        </tr>
-                      )}
-                      {data.invoice.credit_applied > 0 && (
-                        <tr>
-                          <td colSpan={11} style={{ border: '1px solid #000', padding: '4px', textAlign: 'right', fontWeight: 'bold' }}>
-                            Wallet Credit Applied
-                          </td>
-                          <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'right', fontWeight: 'bold', color: '#16a34a' }}>
-                            -{(data.invoice.credit_applied || 0).toFixed(2)}
-                          </td>
-                        </tr>
-                      )}
-                      <tr>
-                        <td colSpan={11} style={{ border: '1px solid #000', padding: '4px', textAlign: 'right', fontWeight: 'bold', backgroundColor: '#f1f5f9' }}>
-                          FINAL PAYABLE AMOUNT
-                        </td>
-                        <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'right', fontWeight: 'bold', backgroundColor: '#f1f5f9', color: '#2563eb' }}>
-                          {Math.round(data.items.reduce((sum: number, item: any) => {
-                              const taxable = item.executed_qty * item.price_at_order;
-                              const gstPct = parseFloat(item.gst_percent) || 0;
-                              return sum + taxable + (taxable * (gstPct / 100));
-                          }, 0) - (data.invoice.extra_discount || 0) - (data.invoice.credit_applied || 0)).toFixed(2)}
-                        </td>
-                      </tr>
-                    </>
+                  {data.invoice.extra_discount > 0 && (
+                    <tr>
+                      <td colSpan={11} style={{ border: '1px solid #000', padding: '4px', textAlign: 'right', fontWeight: 'bold' }}>
+                        Extra Discount {data.invoice.discount_reason ? `(${data.invoice.discount_reason})` : ''}
+                      </td>
+                      <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'right', fontWeight: 'bold', color: '#16a34a' }}>
+                        -{(data.invoice.extra_discount || 0).toFixed(2)}
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>
