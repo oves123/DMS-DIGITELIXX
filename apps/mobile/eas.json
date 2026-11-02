@@ -10,7 +10,7 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://dms.digitelixx.com"
+        "EXPO_PUBLIC_API_URL": "https://dms-digitelixx.oveskhan890.workers.dev"
       },
       "android": {
         "buildType": "apk"
