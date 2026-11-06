@@ -269,6 +269,7 @@ const InvoiceModal = ({ orderId, onClose }: InvoiceModalProps) => {
       
       if (data.invoice.extra_discount > 0) {
         wsData.push(['', '', '', '', '', '', '', '', '', '', 'Extra Discount', -Number((data.invoice.extra_discount || 0).toFixed(2))]);
+        wsData.push(['', '', '', '', '', '', '', '', '', '', 'Grand Total (Net Payable)', Number((data.invoice.grand_total || (totalAmount - (data.invoice.extra_discount || 0))).toFixed(2))]);
       }
       
       const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -474,14 +475,24 @@ const InvoiceModal = ({ orderId, onClose }: InvoiceModalProps) => {
                     </td>
                   </tr>
                   {data.invoice.extra_discount > 0 && (
-                    <tr>
-                      <td colSpan={11} style={{ border: '1px solid #000', padding: '4px', textAlign: 'right', fontWeight: 'bold' }}>
-                        Extra Discount {data.invoice.discount_reason ? `(${data.invoice.discount_reason})` : ''}
-                      </td>
-                      <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'right', fontWeight: 'bold', color: '#16a34a' }}>
-                        -{(data.invoice.extra_discount || 0).toFixed(2)}
-                      </td>
-                    </tr>
+                    <>
+                      <tr>
+                        <td colSpan={11} style={{ border: '1px solid #000', padding: '4px', textAlign: 'right', fontWeight: 'bold' }}>
+                          Extra Discount {data.invoice.discount_reason ? `(${data.invoice.discount_reason})` : ''}
+                        </td>
+                        <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'right', fontWeight: 'bold', color: '#16a34a' }}>
+                          -{(data.invoice.extra_discount || 0).toFixed(2)}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td colSpan={11} style={{ border: '1px solid #000', padding: '4px', textAlign: 'right', fontWeight: 'bold' }}>
+                          Grand Total (Net Payable)
+                        </td>
+                        <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'right', fontWeight: 'bold' }}>
+                          {(data.invoice.grand_total || 0).toFixed(2)}
+                        </td>
+                      </tr>
+                    </>
                   )}
                 </tbody>
               </table>
